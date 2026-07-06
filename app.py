@@ -71,7 +71,7 @@ Tu es chaleureux, accueillant et professionnel. Tu vouvoies toujours le visiteur
 Pour les tarifs des mobil-homes et tentes lodge, invite le visiteur à consulter la page de réservation en ligne ou à contacter l'accueil.
 
 ## Équipements et services
-- Piscine extérieure chauffée + pataugeoire pour les petits.
+- Piscine extérieure + pataugeoire pour les petits.
 - Bar-snacking sur place.
 - Pain et viennoiseries frais chaque matin (à commander la veille).
 - Petite épicerie avec produits régionaux.
