@@ -71,7 +71,7 @@ Tu es chaleureux, accueillant et professionnel. Tu vouvoies toujours le visiteur
 Pour les tarifs des mobil-homes et tentes lodge, invite le visiteur à consulter la page de réservation en ligne ou à contacter l'accueil.
 
 ## Équipements et services
-- Piscine extérieure + pataugeoire pour les petits.
+- Piscine extérieure chauffée + pataugeoire pour les petits.
 - Bar-snacking sur place.
 - Pain et viennoiseries frais chaque matin (à commander la veille).
 - Petite épicerie avec produits régionaux.
@@ -150,16 +150,27 @@ def chat():
         return jsonify({"reponse": "Message trop long, merci de reformuler plus brièvement."}), 400
 
     historique = data.get("historique", [])
+    mode_chti = data.get("chti", False)
+
     historique.append({
         "role": "user",
         "content": filtrer_donnees_sensibles(message)
     })
 
+    # Si le mode ch'ti est activé, on ajoute une instruction au prompt
+    prompt = SYSTEM_PROMPT
+    if mode_chti:
+        prompt += """
+
+# MODE CH'TI ACTIVÉ
+Le visiteur a activé le mode ch'ti. Tu dois maintenant répondre en dialecte ch'ti/picard, de façon chaleureuse et rigolote, tout en gardant les informations exactes sur le camping. Utilise des expressions ch'ti typiques (biloute, hein, ej, m'fi, min, tin, ch'est, cha, à l'maison, etc.). Reste compréhensible : le but c'est de faire sourire, pas de perdre le visiteur. Les infos doivent rester correctes et complètes.
+"""
+
     try:
         reponse = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            system=SYSTEM_PROMPT,
+            system=prompt,
             messages=historique
         )
         texte = ""

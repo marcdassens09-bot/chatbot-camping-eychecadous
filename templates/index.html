@@ -79,6 +79,10 @@
   #mic.listening{background:#e74c3c;border-color:#e74c3c;color:#fff;animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
+  .chti-btn{margin-left:auto;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;width:42px;height:42px;border-radius:50%;font-size:1.3rem;cursor:pointer;transition:all .2s ease;display:grid;place-items:center}
+  .chti-btn:hover{background:rgba(255,255,255,.25)}
+  .chti-btn.active{background:#f4b942;border-color:#f4b942;transform:scale(1.1);box-shadow:0 0 12px rgba(244,185,66,.6)}
+
   .rgpd{text-align:center;padding:6px 14px;font-size:.72rem;color:#8a9b8f;background:#fff;border-top:1px solid var(--line)}
 
   @media (prefers-reduced-motion:reduce){
@@ -91,6 +95,7 @@
   <div class="head">
     <span class="av">⛺</span>
     <div class="who">Camping Les Eychecadous<small>En ligne · posez votre question</small></div>
+    <button id="chtiToggle" class="chti-btn" aria-label="Activer le mode ch'ti" title="Parler ch'ti 😉">😉</button>
   </div>
 
   <div class="messages" id="messages"></div>
@@ -112,6 +117,20 @@
   const inputEl = document.getElementById("input");
   const sendEl = document.getElementById("send");
   let historique = [];
+  let modeChti = false;
+  let vientDuMicro = false;
+
+  // --- TOGGLE CH'TI ---
+  const chtiBtn = document.getElementById("chtiToggle");
+  chtiBtn.addEventListener("click", () => {
+    modeChti = !modeChti;
+    chtiBtn.classList.toggle("active", modeChti);
+    if(modeChti){
+      ajouterMessage("Mode ch'ti activé 😉 Utilisez le micro pour causer ch'ti !", "bot");
+    } else {
+      ajouterMessage("Mode ch'ti désactivé. 🙂", "bot");
+    }
+  });
 
   function ajouterMessage(texte, qui){
     const div = document.createElement("div");
@@ -165,6 +184,9 @@
     const texte = inputEl.value.trim();
     if(!texte) return;
 
+    const envoiChti = vientDuMicro && modeChti;
+    vientDuMicro = false;
+
     ajouterMessage(texte, "user");
     inputEl.value = "";
     sendEl.disabled = true;
@@ -174,7 +196,7 @@
       const rep = await fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: texte, historique: historique })
+        body: JSON.stringify({ message: texte, historique: historique, chti: envoiChti })
       });
       const data = await rep.json();
       cacherTyping();
@@ -223,6 +245,7 @@
     recognition.onresult = (e) => {
       const texte = e.results[0][0].transcript;
       inputEl.value = texte;
+      vientDuMicro = true;
       micEl.classList.remove("listening");
       inputEl.placeholder = "Votre question sur le camping...";
     };
