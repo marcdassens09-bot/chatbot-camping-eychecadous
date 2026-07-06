@@ -74,6 +74,10 @@
   .bar button:hover{background:#237a3f}
   .bar button:disabled{background:#b7d3c3;cursor:not-allowed}
   .bar button svg{width:20px;height:20px}
+  #mic{background:transparent;border:1.5px solid var(--line);color:var(--green-dark)}
+  #mic:hover{background:var(--green-light)}
+  #mic.listening{background:#e74c3c;border-color:#e74c3c;color:#fff;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
   .rgpd{text-align:center;padding:6px 14px;font-size:.72rem;color:#8a9b8f;background:#fff;border-top:1px solid var(--line)}
 
@@ -93,6 +97,9 @@
 
   <div class="bar">
     <input type="text" id="input" placeholder="Votre question sur le camping..." autocomplete="off" maxlength="500" />
+    <button id="mic" aria-label="Dicter" title="Maintenir pour dicter">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    </button>
     <button id="send" aria-label="Envoyer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
     </button>
@@ -192,6 +199,46 @@
   );
   ajouterBoutonsRapides();
   inputEl.focus();
+
+  // --- MICRO : reconnaissance vocale ---
+  const micEl = document.getElementById("mic");
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(SpeechRecognition){
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    micEl.addEventListener("click", () => {
+      if(micEl.classList.contains("listening")){
+        recognition.stop();
+      } else {
+        recognition.start();
+        micEl.classList.add("listening");
+        inputEl.placeholder = "🎤 Je vous écoute...";
+      }
+    });
+
+    recognition.onresult = (e) => {
+      const texte = e.results[0][0].transcript;
+      inputEl.value = texte;
+      micEl.classList.remove("listening");
+      inputEl.placeholder = "Votre question sur le camping...";
+    };
+
+    recognition.onerror = () => {
+      micEl.classList.remove("listening");
+      inputEl.placeholder = "Votre question sur le camping...";
+    };
+
+    recognition.onend = () => {
+      micEl.classList.remove("listening");
+      inputEl.placeholder = "Votre question sur le camping...";
+    };
+  } else {
+    micEl.style.display = "none";
+  }
 </script>
 
 </body>
