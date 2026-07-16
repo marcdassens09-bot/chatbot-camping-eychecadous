@@ -26,7 +26,8 @@ def enregistrer_question(question):
     with open("questions_log.txt", "a", encoding="utf-8") as f:
         f.write(f"{horodatage} | {question_propre}\n")
 
-def extraire_dates(texte):
+from extraire_dates import extraire_dates
+def extraire_dates_old(texte):
     """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
     import re
     from datetime import datetime
