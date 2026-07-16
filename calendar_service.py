@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import os
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-KEY_FILE = os.path.join(os.path.dirname(__file__), 'google_calendar_key.json')
+KEY_FILE = os.environ.get("GOOGLE_CALENDAR_KEY_PATH", "/etc/secrets/google_calendar_key.json")
 CALENDAR_ID = '431c633f0ab763af31481ce621e1c4b9c9ee2ba511888c0107e7ebeda4ed2034@group.calendar.google.com'
 
 def get_service():
