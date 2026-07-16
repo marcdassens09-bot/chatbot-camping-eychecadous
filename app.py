@@ -194,6 +194,16 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
         print(f"Erreur API chat : {e}")
         return jsonify({"reponse": "Desole, je rencontre un probleme technique. Merci de reessayer dans quelques instants."}), 500
 
+@app.route("/test-calendrier")
+def test_calendrier():
+    try:
+        from extraire_dates import extraire_dates
+        dates = extraire_dates("du 1 au 7 aout")
+        dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+        return jsonify({"dates": dates, "dispo": dispo})
+    except Exception as e:
+        return jsonify({"erreur": str(e)})
+
 @app.route("/effacer", methods=["POST"])
 def effacer():
     global historique
