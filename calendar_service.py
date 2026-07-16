@@ -26,7 +26,7 @@ def creer_reservation(nom, email, date_debut, date_fin, nb_personnes):
     """Crée un événement de réservation dans le calendrier"""
     service = get_service()
     event = {
-        'summary': f'Réservation — {nom} ({nb_personnes} pers.)',
+        'summary': f'Reservation - {nom} ({nb_personnes} pers.)',
         'description': f'Email: {email}\nPersonnes: {nb_personnes}',
         'start': {'date': date_debut, 'timeZone': 'Europe/Paris'},
         'end':   {'date': date_fin,   'timeZone': 'Europe/Paris'},
