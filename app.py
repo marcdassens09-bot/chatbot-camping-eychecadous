@@ -77,9 +77,11 @@ def chat():
 
     # Vérification calendrier si le message parle de dispo/réservation
     info_calendrier = ""
+    print(f"DEBUG message: {message}")
     mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
     if any(mot in message.lower() for mot in mots_cles):
         dates = extraire_dates(message)
+        print(f"DEBUG dates extraites: {dates}")
         if len(dates) >= 2:
             try:
                 dispo = calendar_service.verifier_dispo(dates[0], dates[1])
