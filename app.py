@@ -5,25 +5,64 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import calendar_service
+
 load_dotenv()
 app = Flask(__name__)
 limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
 client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 historique = []
+
 def filtrer_donnees_sensibles(texte):
     texte = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[EMAIL MASQUE]', texte)
     texte = re.sub(r'\b0[1-9](\s?\d{2}){4}\b', '[TELEPHONE MASQUE]', texte)
     texte = re.sub(r'\b(?:\d[ -]?){13,16}\b', '[CARTE MASQUEE]', texte)
     return texte
+
 def enregistrer_question(question):
     from datetime import datetime
     horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
     question_propre = filtrer_donnees_sensibles(question)
     with open("questions_log.txt", "a", encoding="utf-8") as f:
         f.write(f"{horodatage} | {question_propre}\n")
+
+def extraire_dates(texte):
+    """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
+    import re
+    from datetime import datetime
+    annee = datetime.now().year
+    pattern = r'(\d{1,2})[\/\-\s](?:au\s+)?(\d{1,2})[\/\-\s]?(\d{2,4})?'
+    matches = re.findall(pattern, texte)
+    dates = []
+    for m in matches:
+        try:
+            jour = int(m[0])
+            mois = int(m[1])
+            an = int(m[2]) if m[2] else annee
+            if an < 100:
+                an += 2000
+            dates.append(f"{an}-{mois:02d}-{jour:02d}")
+        except:
+            pass
+    mois_noms = {
+        'janvier':1,'fevrier':2,'février':2,'mars':3,'avril':4,'mai':5,'juin':6,
+        'juillet':7,'aout':8,'août':8,'septembre':9,'octobre':10,'novembre':11,'decembre':12,'décembre':12
+    }
+    pattern2 = r'(\d{1,2})\s+(?:au\s+\d{1,2}\s+)?(' + '|'.join(mois_noms.keys()) + r')'
+    matches2 = re.findall(pattern2, texte.lower())
+    for m in matches2:
+        try:
+            jour = int(m[0])
+            mois = mois_noms[m[1]]
+            dates.append(f"{annee}-{mois:02d}-{jour:02d}")
+        except:
+            pass
+    return dates
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
 @app.route("/chat", methods=["POST"])
 @limiter.limit("10 per minute")
 def chat():
@@ -32,10 +71,35 @@ def chat():
         enregistrer_question(message)
     if message and len(message) > 500:
         return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
+
+    message_filtre = filtrer_donnees_sensibles(message)
+
+    # Vérification calendrier si le message parle de dispo/réservation
+    info_calendrier = ""
+    mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
+    if any(mot in message.lower() for mot in mots_cles):
+        dates = extraire_dates(message)
+        if len(dates) >= 2:
+            try:
+                dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+                if dispo:
+                    info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
+                else:
+                    info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
+            except Exception as e:
+                print(f"Erreur calendrier : {e}")
+        elif len(dates) == 1:
+            try:
+                reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
+                info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
+            except Exception as e:
+                print(f"Erreur calendrier : {e}")
+
     historique.append({
         "role": "user",
-        "content": filtrer_donnees_sensibles(message)
+        "content": message_filtre + info_calendrier
     })
+
     try:
         reponse = client.messages.create(
             model="claude-sonnet-4-6",
@@ -44,6 +108,7 @@ def chat():
 1. DRAPS ET LINGE : aucun drap, linge, serviette ni literie n est fourni pour AUCUN hebergement. Ni emplacements, ni mobil-homes, ni bungalows. Reponse obligatoire : "Aucun linge n est fourni, pensez a apporter votre literie."
 2. EMAIL : toujours campingartigat@hotmail.fr - jamais gmail
 3. ANNULATION : basse saison = 48h avant l arrivee. Haute saison = 3 semaines avant l arrivee.
+4. CALENDRIER : si le message contient [CALENDRIER], utilise cette info pour repondre precisement sur les disponibilites.
 
 Tu es l assistant virtuel du Camping Les Eychecadous, a Artigat en Ariege (09130).
 Tu reponds aux questions des visiteurs de facon professionnelle, chaleureuse et concise.
@@ -125,11 +190,13 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
     except Exception as e:
         print(f"Erreur API chat : {e}")
         return jsonify({"reponse": "Desole, je rencontre un probleme technique. Merci de reessayer dans quelques instants."}), 500
+
 @app.route("/effacer", methods=["POST"])
 def effacer():
     global historique
     historique = []
     return jsonify({"status": "ok"})
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
