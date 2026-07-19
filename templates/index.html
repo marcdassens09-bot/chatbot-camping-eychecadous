@@ -1,268 +1,556 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Camping Les Eychecadous — Assistant</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --green-dark:#1a5632;
-    --green:#2a8c4a;
-    --green-light:#e6f5ec;
-    --sand:#faf6f0;
-    --ink:#1c2b21;
-    --line:#dde8df;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{
-    font-family:"Figtree",system-ui,sans-serif;
-    background:var(--sand);
-    color:var(--ink);
-    display:flex;flex-direction:column;height:100vh;
-  }
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant — Camping Les Eychecadous</title>
+  <style>
+    /* ─── RESET & BASE ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a1a10;
+    }
 
-  .head{
-    display:flex;align-items:center;gap:12px;
-    padding:16px 18px;
-    background:linear-gradient(135deg,var(--green-dark),var(--green));
-    color:#fff;flex-shrink:0;
-  }
-  .head .av{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:1.3rem}
-  .head .who{font-weight:600;font-size:1.05rem;line-height:1.2}
-  .head .who small{display:block;font-weight:400;font-size:.75rem;color:rgba(255,255,255,.75)}
+    /* ─── ANIMATIONS ─── */
+    @keyframes scintille  { 0%,100%{opacity:1;}  50%{opacity:0.15;} }
+    @keyframes scintille2 { 0%,100%{opacity:0.5;} 50%{opacity:1;}   }
+    @keyframes nuage      { 0%{transform:translateX(0);} 100%{transform:translateX(28px);} }
+    @keyframes nuage2     { 0%{transform:translateX(0);} 100%{transform:translateX(-22px);} }
+    @keyframes braise     { 0%,100%{opacity:0.9;} 50%{opacity:0.25;} }
+    @keyframes braise2    { 0%,100%{opacity:0.6;} 50%{opacity:1;}    }
+    @keyframes lumiere    { 0%,100%{opacity:0.85;} 50%{opacity:1;}   }
+    @keyframes slideUp    { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
 
-  .messages{
-    flex:1;overflow-y:auto;padding:20px 16px;
-    display:flex;flex-direction:column;gap:12px;
-  }
-  .msg{max-width:82%;padding:12px 16px;border-radius:16px;font-size:.96rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
-  .msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px}
-  .msg.user{align-self:flex-end;background:var(--green-dark);color:#fff;border-bottom-right-radius:5px}
-  .msg a{color:inherit;font-weight:600}
+    .s1  { animation: scintille  2.1s ease-in-out infinite; }
+    .s2  { animation: scintille2 1.7s ease-in-out infinite; }
+    .s3  { animation: scintille  3s   ease-in-out infinite 0.5s; }
+    .s4  { animation: scintille2 2.4s ease-in-out infinite 0.8s; }
+    .s5  { animation: scintille  1.9s ease-in-out infinite 1.2s; }
+    .s6  { animation: scintille2 2.8s ease-in-out infinite 0.3s; }
+    .s7  { animation: scintille  2.2s ease-in-out infinite 1.5s; }
+    .s8  { animation: scintille2 1.5s ease-in-out infinite 0.9s; }
+    .na  { animation: nuage  14s ease-in-out infinite alternate; }
+    .nb  { animation: nuage2 18s ease-in-out infinite alternate; }
+    .br1 { animation: braise  1.1s ease-in-out infinite; }
+    .br2 { animation: braise2 0.9s ease-in-out infinite 0.3s; }
+    .br3 { animation: braise  1.4s ease-in-out infinite 0.6s; }
+    .lum { animation: lumiere 2.5s ease-in-out infinite; }
 
-  .quick-btns{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 8px;align-self:flex-start}
-  .quick-btns button{
-    background:var(--green-light);border:1.5px solid var(--green);color:var(--green-dark);
-    padding:8px 14px;border-radius:999px;font-size:.88rem;font-family:inherit;
-    font-weight:500;cursor:pointer;transition:background .15s ease;
-  }
-  .quick-btns button:hover{background:#d0edda}
+    /* ─── LAYOUT ─── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      background: #0a1a10;
+      transition: background 3s ease-in-out;
+    }
+    #app.mode-jour { background: #e8f5e9; }
 
-  .typing{align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;border-bottom-left-radius:5px;padding:13px 16px;display:flex;gap:5px}
-  .typing span{width:7px;height:7px;border-radius:50%;background:#9DB3A6;animation:blink 1.2s infinite}
-  .typing span:nth-child(2){animation-delay:.2s}
-  .typing span:nth-child(3){animation-delay:.4s}
-  @keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+    /* ─── HEADER ─── */
+    .hdr {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #0f2318;
+      border-bottom: 1px solid #1F7A4D33;
+      transition: background 3s ease-in-out;
+      flex-shrink: 0;
+    }
+    #app.mode-jour .hdr { background: #1b6a8a; border-bottom-color: transparent; }
 
-  .bar{
-    display:flex;gap:9px;padding:12px 14px;background:#fff;border-top:1px solid var(--line);flex-shrink:0;
-  }
-  .bar input{
-    flex:1;border:1.5px solid var(--line);border-radius:999px;
-    padding:12px 18px;font-size:.96rem;font-family:inherit;outline:none;
-  }
-  .bar input:focus{border-color:var(--green)}
-  .bar button{
-    border:none;background:var(--green);color:#fff;border-radius:50%;
-    width:46px;height:46px;flex-shrink:0;cursor:pointer;display:grid;place-items:center;
-    transition:background .15s ease;
-  }
-  .bar button:hover{background:#237a3f}
-  .bar button:disabled{background:#b7d3c3;cursor:not-allowed}
-  .bar button svg{width:20px;height:20px}
-  #mic{background:transparent;border:1.5px solid var(--line);color:var(--green-dark)}
-  #mic:hover{background:var(--green-light)}
-  #mic.listening{background:#e74c3c;border-color:#e74c3c;color:#fff;animation:pulse 1.2s infinite}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+    .av {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: #1F7A4D;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      border: 2px solid #E8730A;
+      flex-shrink: 0;
+    }
+    .hdr-txt { flex: 1; }
+    .hdr-txt h1 { font-size: 14px; font-weight: 600; color: #fff; }
+    .hdr-txt p  { font-size: 11px; color: #5aaa78; transition: color 3s; }
+    #app.mode-jour .hdr-txt p { color: #a8dff0; }
 
-  .chti-btn{margin-left:auto;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:999px;font-size:1rem;cursor:pointer;transition:all .2s ease;display:flex;align-items:center;gap:6px}
-  .chti-btn:hover{background:rgba(255,255,255,.25)}
-  .chti-btn.active{background:#f4b942;border-color:#f4b942;transform:scale(1.05);box-shadow:0 0 12px rgba(244,185,66,.6)}
-  .chti-txt{font-size:.75rem;font-weight:600;letter-spacing:.02em}
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 6px #4ade80;
+      flex-shrink: 0;
+    }
 
-  .rgpd{text-align:center;padding:6px 14px;font-size:.72rem;color:#8a9b8f;background:#fff;border-top:1px solid var(--line)}
+    /* ─── SCÈNE ANIMÉE ─── */
+    .scene-wrap {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .scene-layer {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      transition: opacity 3s ease-in-out;
+    }
+    .scene-wrap svg { display: block; width: 100%; height: 100%; }
 
-  @media (prefers-reduced-motion:reduce){
-    .typing span{animation:none;opacity:.6}
-  }
-</style>
+    /* ─── ZONE CHAT ─── */
+    .chat-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 14px 0;
+      overflow-y: auto;
+      gap: 10px;
+    }
+
+    /* Messages */
+    .msg {
+      max-width: 85%;
+      padding: 10px 13px;
+      border-radius: 4px 14px 14px 14px;
+      font-size: 14px;
+      line-height: 1.55;
+      animation: slideUp 0.25s ease;
+    }
+    .msg.bot {
+      background: #1a4d30;
+      color: #dff0e8;
+      align-self: flex-start;
+      transition: background 3s, color 3s;
+    }
+    #app.mode-jour .msg.bot { background: #1F7A4D; color: #fff; }
+    .msg.user {
+      background: #E8730A;
+      color: #fff;
+      align-self: flex-end;
+      border-radius: 14px 4px 14px 14px;
+    }
+
+    /* Boutons rapides */
+    .quick-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding-bottom: 4px;
+    }
+    .qbtn {
+      background: transparent;
+      border: 1px solid #1F7A4D;
+      color: #5aaa78;
+      border-radius: 20px;
+      padding: 6px 13px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 3s;
+    }
+    #app.mode-jour .qbtn {
+      background: #fff;
+      color: #1F7A4D;
+    }
+    .qbtn:hover { background: #1F7A4D; color: #fff; }
+
+    /* Indicateur frappe */
+    .typing {
+      display: flex; gap: 4px; align-items: center;
+      padding: 8px 13px;
+      background: #1a4d30;
+      border-radius: 4px 14px 14px 14px;
+      align-self: flex-start;
+      width: fit-content;
+      transition: background 3s;
+    }
+    #app.mode-jour .typing { background: #1F7A4D44; }
+    .typing span {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #5aaa78;
+      animation: braise 0.8s ease-in-out infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+    /* ─── BARRE SAISIE ─── */
+    .input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px 12px;
+      background: #0a1a10;
+      border-top: 1px solid #1F7A4D22;
+      flex-shrink: 0;
+      transition: background 3s;
+    }
+    #app.mode-jour .input-bar { background: #e8f5e9; }
+
+    .inp-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: #0f2318;
+      border: 1px solid #1F7A4D44;
+      border-radius: 24px;
+      padding: 8px 14px;
+      gap: 8px;
+      transition: background 3s, border-color 3s;
+    }
+    #app.mode-jour .inp-wrap { background: #fff; border-color: #1F7A4D66; }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      color: #dff0e8;
+      transition: color 3s;
+    }
+    #app.mode-jour #user-input { color: #1b3a2b; }
+    #user-input::placeholder { color: #2d6040; transition: color 3s; }
+    #app.mode-jour #user-input::placeholder { color: #aaa; }
+
+    /* Bouton micro */
+    #mic-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #2d6040;
+      font-size: 16px;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+    #mic-btn.active { color: #E8730A; }
+
+    /* Bouton envoyer */
+    #send-btn {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: #E8730A;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    #send-btn:hover { transform: scale(1.08); }
+    #send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ─── RGPD ─── */
+    .rgpd {
+      font-size: 10px;
+      color: #1e4a2a;
+      text-align: center;
+      padding: 4px 0 8px;
+      transition: color 3s;
+    }
+    #app.mode-jour .rgpd { color: #4a7a5e; }
+  </style>
 </head>
 <body>
 
-  <div class="head">
-    <span class="av">⛺</span>
-    <div class="who">Camping Les Eychecadous<small>En ligne · posez votre question</small></div>
-    <button id="chtiToggle" class="chti-btn" aria-label="Activer le mode ch'ti" title="Parler ch'ti avec le micro !">😜 <span class="chti-txt">Ej cause ch'ti !</span></button>
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="av">⛺</div>
+    <div class="hdr-txt">
+      <h1>Camping Les Eychecadous</h1>
+      <p>Assistant virtuel · Ariège</p>
+    </div>
+    <div class="dot"></div>
+  </header>
+
+  <!-- SCÈNE ANIMÉE -->
+  <div class="scene-wrap">
+
+    <!-- COUCHE NUIT -->
+    <div class="scene-layer" id="l-nuit">
+      <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <rect width="400" height="200" fill="#0a1a10"/>
+        <g class="na" opacity="0.18"><path d="M35 28 C33 19 45 14 54 18 C57 10 68 8 75 15 C82 12 91 17 89 24 C95 24 97 33 89 35 C72 37 37 36 35 28Z" fill="#2a5c3e"/></g>
+        <g class="nb" opacity="0.14"><path d="M275 20 C273 12 285 8 294 12 C297 5 308 4 315 10 C322 7 331 13 328 19 C333 20 335 28 328 30 C312 32 277 31 275 20Z" fill="#2a5c3e"/></g>
+        <circle class="s1" cx="24"  cy="14" r="1.2" fill="#d0ead8"/>
+        <circle class="s2" cx="65"  cy="8"  r="1"   fill="#fff"/>
+        <circle class="s3" cx="125" cy="18" r="1.1" fill="#d0ead8"/>
+        <circle class="s4" cx="185" cy="7"  r="1"   fill="#fff"/>
+        <circle class="s5" cx="235" cy="15" r="1.2" fill="#d0ead8"/>
+        <circle class="s6" cx="305" cy="10" r="0.9" fill="#fff"/>
+        <circle class="s7" cx="368" cy="16" r="1.1" fill="#d0ead8"/>
+        <circle class="s8" cx="98"  cy="32" r="0.8" fill="#fff"/>
+        <circle class="s1" cx="252" cy="28" r="1"   fill="#d0ead8"/>
+        <circle class="s3" cx="342" cy="36" r="0.8" fill="#fff"/>
+        <!-- Lune -->
+        <circle cx="368" cy="26" r="15" fill="#c5ddb5" opacity="0.9"/>
+        <circle cx="363" cy="22" r="4"  fill="#b0cc9e" opacity="0.4"/>
+        <circle cx="372" cy="31" r="2.5" fill="#b0cc9e" opacity="0.3"/>
+        <circle cx="374" cy="20" r="13" fill="#0a1a10"/>
+        <!-- Montagnes -->
+        <path d="M-8 148 C18 118 40 88 65 68 C78 80 92 96 106 148Z" fill="#0c2218"/>
+        <path d="M52 148 C88 110 126 72 160 52 C175 66 192 92 210 116 C224 132 238 148 252 148Z" fill="#091c13"/>
+        <path d="M205 148 C245 110 282 72 315 56 C330 70 352 98 388 148Z" fill="#0c2218"/>
+        <!-- Prairie -->
+        <path d="M0 148 C65 138 155 142 200 140 C268 138 340 142 400 140 L400 200 L0 200Z" fill="#071510"/>
+        <!-- Sapins gauche -->
+        <g><rect x="30" y="128" width="4" height="22" fill="#3d1f0a"/>
+          <path d="M32 95 C27 102 20 110 17 117 C22 115 27 114 32 114 C37 114 42 115 47 117 C44 110 37 102 32 95Z" fill="#0f3d1e"/>
+          <path d="M32 82 C27 90 21 97 18 104 C23 102 28 101 32 101 C36 101 41 102 46 104 C43 97 37 90 32 82Z" fill="#145228"/>
+          <path d="M32 70 C28 78 22 85 19 91 C24 89 28 89 32 89 C36 89 40 89 45 91 C42 85 36 78 32 70Z" fill="#0f3d1e"/>
+        </g>
+        <!-- Sapins droite -->
+        <g><rect x="360" y="124" width="4" height="26" fill="#3d1f0a"/>
+          <path d="M362 88 C356 98 349 106 346 114 C352 112 357 111 362 111 C367 111 372 112 378 114 C375 106 368 98 362 88Z" fill="#0f3d1e"/>
+          <path d="M362 75 C357 85 350 93 347 100 C353 98 358 97 362 97 C366 97 371 98 377 100 C374 93 367 85 362 75Z" fill="#145228"/>
+          <path d="M362 63 C358 72 352 79 349 86 C354 84 359 83 362 83 C365 83 370 84 375 86 C372 79 366 72 362 63Z" fill="#0f3d1e"/>
+        </g>
+        <!-- Lodge Safari nuit -->
+        <ellipse class="lum" cx="128" cy="130" rx="42" ry="26" fill="#f9d71c" opacity="0.05"/>
+        <rect x="90" y="144" width="76" height="4" rx="2" fill="#3d2a15"/>
+        <path d="M96 144 L104 116 L152 116 L160 144 Z" fill="#4a4030" stroke="#5c5040" stroke-width="1"/>
+        <path d="M90 118 L128 104 L166 118 L158 118 L128 108 L98 118 Z" fill="#3d3525" stroke="#2d2818" stroke-width="1"/>
+        <line x1="98"  y1="144" x2="98"  y2="117" stroke="#3d2a15" stroke-width="2.5"/>
+        <line x1="158" y1="144" x2="158" y2="117" stroke="#3d2a15" stroke-width="2.5"/>
+        <path class="lum" d="M120 144 L124 120 L132 120 L136 144 Z" fill="#f9d71c" opacity="0.75"/>
+        <path d="M120 144 L124 120 L120 122 L114 144 Z" fill="#3d3525"/>
+        <path d="M136 144 L132 120 L136 122 L142 144 Z" fill="#3d3525"/>
+        <rect class="lum" x="144" y="124" width="10" height="9" rx="1" fill="#f9d71c" opacity="0.55"/>
+        <ellipse class="lum" cx="128" cy="152" rx="12" ry="3" fill="#f9d71c" opacity="0.1"/>
+        <!-- Lodge Bengali nuit -->
+        <ellipse class="lum" cx="289" cy="130" rx="42" ry="26" fill="#f9d71c" opacity="0.05"/>
+        <rect x="254" y="144" width="70" height="4" rx="2" fill="#3d2a15"/>
+        <path d="M256 122 L289 100 L322 122 Z" fill="#5c2a1c" stroke="#3d1c12" stroke-width="1"/>
+        <path d="M260 144 L262 122 L316 122 L318 144 Z" fill="#4a4030" stroke="#5c5040" stroke-width="1"/>
+        <line x1="262" y1="144" x2="262" y2="122" stroke="#3d2a15" stroke-width="2.5"/>
+        <line x1="316" y1="144" x2="316" y2="122" stroke="#3d2a15" stroke-width="2.5"/>
+        <path class="lum" d="M282 144 L284 125 L294 125 L296 144 Z" fill="#f9d71c" opacity="0.65"/>
+        <circle class="lum" cx="270" cy="131" r="5" fill="#f9d71c" opacity="0.7"/>
+        <circle class="lum" cx="308" cy="131" r="5" fill="#f9d71c" opacity="0.65"/>
+        <line x1="289" y1="100" x2="289" y2="92" stroke="#3d2a15" stroke-width="1.2"/>
+        <path d="M289 92 L298 95 L289 98 Z" fill="#8a4408"/>
+        <ellipse class="lum" cx="289" cy="152" rx="12" ry="3" fill="#f9d71c" opacity="0.1"/>
+        <!-- Barbecue nuit -->
+        <line x1="192" y1="150" x2="187" y2="168" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+        <line x1="224" y1="150" x2="229" y2="168" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+        <line x1="189" y1="161" x2="227" y2="161" stroke="#555" stroke-width="1.2"/>
+        <path d="M188 144 C188 157 195 165 208 165 C221 165 228 157 228 144 Z" fill="#1e1e1e"/>
+        <rect x="186" y="140" width="44" height="6" rx="3" fill="#3a3a3a" stroke="#555" stroke-width="0.6"/>
+        <line x1="194" y1="140" x2="194" y2="146" stroke="#555" stroke-width="1"/>
+        <line x1="201" y1="140" x2="201" y2="146" stroke="#555" stroke-width="1"/>
+        <line x1="208" y1="140" x2="208" y2="146" stroke="#555" stroke-width="1"/>
+        <line x1="215" y1="140" x2="215" y2="146" stroke="#555" stroke-width="1"/>
+        <line x1="222" y1="140" x2="222" y2="146" stroke="#555" stroke-width="1"/>
+        <ellipse class="br1" cx="198" cy="152" rx="6"   ry="2.5" fill="#cc3300" opacity="0.7"/>
+        <ellipse class="br2" cx="208" cy="154" rx="5"   ry="2"   fill="#E8730A" opacity="0.85"/>
+        <ellipse class="br3" cx="217" cy="152" rx="5"   ry="2.2" fill="#cc3300" opacity="0.7"/>
+      </svg>
+    </div>
+
+    <!-- COUCHE JOUR -->
+    <div class="scene-layer" id="l-jour" style="opacity:0;">
+      <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <rect width="400" height="200" fill="#87ceeb"/>
+        <circle cx="355" cy="32" r="22" fill="#f9d71c"/>
+        <circle cx="355" cy="32" r="30" fill="#f9d71c" opacity="0.15"/>
+        <g class="na"><path d="M40 36 C38 26 52 20 62 25 C65 16 78 14 86 21 C94 17 105 23 102 31 C109 31 111 41 102 43 C84 45 42 44 40 36Z" fill="white" opacity="0.95"/></g>
+        <g class="nb"><path d="M215 24 C213 15 227 10 237 15 C240 7 253 5 261 12 C269 8 279 15 276 22 C282 22 284 32 276 34 C257 36 217 35 215 24Z" fill="white" opacity="0.9"/></g>
+        <path d="M-8 148 C18 118 40 88 65 68 C78 80 92 96 106 148Z" fill="#2d6e3e"/>
+        <path d="M52 148 C88 108 126 68 160 48 C175 62 192 88 210 112 C224 128 238 148 252 148Z" fill="#1f5c2e"/>
+        <path d="M205 148 C245 108 282 68 315 52 C330 66 352 96 388 148Z" fill="#2d6e3e"/>
+        <path d="M0 148 C65 136 155 140 200 138 C268 136 340 140 400 138 L400 200 L0 200Z" fill="#3a7d44"/>
+        <!-- Sapins gauche -->
+        <g><rect x="30" y="128" width="4" height="22" fill="#5c3a1e"/>
+          <path d="M32 95 C27 102 20 110 17 117 C22 115 27 114 32 114 C37 114 42 115 47 117 C44 110 37 102 32 95Z" fill="#1f5c2e"/>
+          <path d="M32 82 C27 90 21 97 18 104 C23 102 28 101 32 101 C36 101 41 102 46 104 C43 97 37 90 32 82Z" fill="#2d7a3e"/>
+          <path d="M32 70 C28 78 22 85 19 91 C24 89 28 89 32 89 C36 89 40 89 45 91 C42 85 36 78 32 70Z" fill="#1f5c2e"/>
+        </g>
+        <!-- Sapins droite -->
+        <g><rect x="360" y="124" width="4" height="26" fill="#5c3a1e"/>
+          <path d="M362 88 C356 98 349 106 346 114 C352 112 357 111 362 111 C367 111 372 112 378 114 C375 106 368 98 362 88Z" fill="#1f5c2e"/>
+          <path d="M362 75 C357 85 350 93 347 100 C353 98 358 97 362 97 C366 97 371 98 377 100 C374 93 367 85 362 75Z" fill="#2d7a3e"/>
+          <path d="M362 63 C358 72 352 79 349 86 C354 84 359 83 362 83 C365 83 370 84 375 86 C372 79 366 72 362 63Z" fill="#1f5c2e"/>
+        </g>
+        <!-- Lodge Safari jour -->
+        <rect x="90" y="144" width="76" height="4" rx="2" fill="#8b5a2b"/>
+        <path d="M96 144 L104 116 L152 116 L160 144 Z" fill="#e8dcc0" stroke="#c4b090" stroke-width="1"/>
+        <path d="M90 118 L128 104 L166 118 L158 118 L128 108 L98 118 Z" fill="#d4c4a0" stroke="#b0a080" stroke-width="1"/>
+        <line x1="98"  y1="144" x2="98"  y2="117" stroke="#8b5a2b" stroke-width="2.5"/>
+        <line x1="158" y1="144" x2="158" y2="117" stroke="#8b5a2b" stroke-width="2.5"/>
+        <path d="M120 144 L124 120 L132 120 L136 144 Z" fill="#5c4a35"/>
+        <path d="M120 144 L124 120 L120 122 L114 144 Z" fill="#d4c4a0"/>
+        <path d="M136 144 L132 120 L136 122 L142 144 Z" fill="#d4c4a0"/>
+        <rect x="144" y="124" width="10" height="9" rx="1" fill="#9ab0c0" opacity="0.7" stroke="#8b5a2b" stroke-width="0.8"/>
+        <!-- Lodge Bengali jour -->
+        <rect x="254" y="144" width="70" height="4" rx="2" fill="#8b5a2b"/>
+        <path d="M256 122 L289 100 L322 122 Z" fill="#c9573a" stroke="#a04028" stroke-width="1"/>
+        <path d="M260 144 L262 122 L316 122 L318 144 Z" fill="#ede0c8" stroke="#c4b090" stroke-width="1"/>
+        <line x1="262" y1="144" x2="262" y2="122" stroke="#8b5a2b" stroke-width="2.5"/>
+        <line x1="316" y1="144" x2="316" y2="122" stroke="#8b5a2b" stroke-width="2.5"/>
+        <path d="M282 144 L284 125 L294 125 L296 144 Z" fill="#d8c8a8" stroke="#b0a080" stroke-width="0.8"/>
+        <line x1="289" y1="125" x2="289" y2="144" stroke="#8b5a2b" stroke-width="1" stroke-dasharray="2,1.5"/>
+        <circle cx="270" cy="131" r="5" fill="#9ab0c0" opacity="0.7" stroke="#8b5a2b" stroke-width="0.8"/>
+        <circle cx="308" cy="131" r="5" fill="#9ab0c0" opacity="0.7" stroke="#8b5a2b" stroke-width="0.8"/>
+        <line x1="289" y1="100" x2="289" y2="92" stroke="#8b5a2b" stroke-width="1.2"/>
+        <path d="M289 92 L298 95 L289 98 Z" fill="#E8730A"/>
+        <!-- Boules pétanque -->
+        <circle cx="195" cy="166" r="6"   fill="#999" stroke="#666" stroke-width="1"/>
+        <path d="M190 163 Q195 160 200 163" stroke="#666" stroke-width="0.8" fill="none"/>
+        <circle cx="212" cy="170" r="6"   fill="#888" stroke="#555" stroke-width="1"/>
+        <path d="M207 167 Q212 164 217 167" stroke="#555" stroke-width="0.8" fill="none"/>
+        <circle cx="227" cy="164" r="6"   fill="#aaa" stroke="#777" stroke-width="1"/>
+        <path d="M222 161 Q227 158 232 161" stroke="#777" stroke-width="0.8" fill="none"/>
+        <circle cx="216" cy="158" r="2.5" fill="#cc4422"/>
+        <ellipse cx="195" cy="174" rx="6" ry="1.5" fill="#2d6030" opacity="0.3"/>
+        <ellipse cx="212" cy="178" rx="6" ry="1.5" fill="#2d6030" opacity="0.3"/>
+        <ellipse cx="227" cy="172" rx="6" ry="1.5" fill="#2d6030" opacity="0.3"/>
+      </svg>
+    </div>
+
+  </div><!-- /scene-wrap -->
+
+  <!-- ZONE MESSAGES -->
+  <div class="chat-zone" id="chat-zone">
+    <!-- Messages injectés par JS -->
   </div>
 
-  <div class="messages" id="messages"></div>
-
-  <div class="bar">
-    <input type="text" id="input" placeholder="Votre question sur le camping..." autocomplete="off" maxlength="500" />
-    <button id="mic" aria-label="Dicter" title="Maintenir pour dicter">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-    </button>
-    <button id="send" aria-label="Envoyer">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-    </button>
+  <!-- BARRE SAISIE -->
+  <div class="input-bar">
+    <div class="inp-wrap">
+      <input id="user-input" type="text" placeholder="Posez votre question…" autocomplete="off"/>
+      <button id="mic-btn" title="Microphone">🎙️</button>
+    </div>
+    <button id="send-btn">➤</button>
   </div>
+  <p class="rgpd">🔒 Aucune donnée personnelle conservée · RGPD</p>
 
-  <div class="rgpd">🔒 Vos données ne sont ni stockées ni transmises à des tiers.</div>
+</div><!-- /app -->
 
 <script>
-  const messagesEl = document.getElementById("messages");
-  const inputEl = document.getElementById("input");
-  const sendEl = document.getElementById("send");
-  let historique = [];
-  let modeChti = false;
-  let vientDuMicro = false;
-
-  // --- TOGGLE CH'TI ---
-  const chtiBtn = document.getElementById("chtiToggle");
-  chtiBtn.addEventListener("click", () => {
-    modeChti = !modeChti;
-    chtiBtn.classList.toggle("active", modeChti);
-    if(modeChti){
-      ajouterMessage("Mode ch'ti activé 😉 Utilisez le micro pour causer ch'ti !", "bot");
-    } else {
-      ajouterMessage("Mode ch'ti désactivé. 🙂", "bot");
-    }
-  });
-
-  function ajouterMessage(texte, qui){
-    const div = document.createElement("div");
-    div.className = "msg " + qui;
-    const html = texte
-      .replace(/([\w.-]+@[\w.-]+\.\w+)/g, '<a href="mailto:$1">$1</a>')
-      .replace(/(reservation\.secureholiday\.net\/fr\/5438\/)/g, '<a href="https://$1" target="_blank">$1</a>');
-    div.innerHTML = html;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function ajouterBoutonsRapides(){
-    const wrap = document.createElement("div");
-    wrap.className = "quick-btns";
-    const questions = [
-      "Quels sont vos tarifs ?",
-      "Quels hébergements proposez-vous ?",
-      "Acceptez-vous les animaux ?",
-      "Comment réserver ?",
-      "Que faire dans les environs ?"
-    ];
-    questions.forEach(q => {
-      const btn = document.createElement("button");
-      btn.textContent = q;
-      btn.addEventListener("click", () => {
-        wrap.remove();
-        inputEl.value = q;
-        envoyer();
-      });
-      wrap.appendChild(btn);
-    });
-    messagesEl.appendChild(wrap);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function montrerTyping(){
-    const div = document.createElement("div");
-    div.className = "typing";
-    div.id = "typing";
-    div.innerHTML = "<span></span><span></span><span></span>";
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-  function cacherTyping(){
-    const t = document.getElementById("typing");
-    if(t) t.remove();
-  }
-
-  async function envoyer(){
-    const texte = inputEl.value.trim();
-    if(!texte) return;
-
-    const envoiChti = vientDuMicro && modeChti;
-    vientDuMicro = false;
-
-    ajouterMessage(texte, "user");
-    inputEl.value = "";
-    sendEl.disabled = true;
-    montrerTyping();
-
-    try{
-      const rep = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: texte, historique: historique, chti: envoiChti })
-      });
-      const data = await rep.json();
-      cacherTyping();
-      ajouterMessage(data.reponse, "bot");
-      if(data.historique) historique = data.historique;
-    }catch(e){
-      cacherTyping();
-      ajouterMessage("Désolé, un problème est survenu. Réessayez dans un instant.", "bot");
-    }finally{
-      sendEl.disabled = false;
-      inputEl.focus();
-    }
-  }
-
-  sendEl.addEventListener("click", envoyer);
-  inputEl.addEventListener("keydown", e => { if(e.key === "Enter") envoyer(); });
-
-  // Message d'accueil
-  ajouterMessage(
-    "Bonjour ! 👋 Bienvenue au Camping Les Eychecadous, votre petit coin de nature en Ariège.\n\nJe peux vous renseigner sur nos hébergements, nos tarifs, les activités ou vous aider à préparer votre séjour. Que souhaitez-vous savoir ?",
-    "bot"
-  );
-  ajouterBoutonsRapides();
-  inputEl.focus();
-
-  // --- MICRO : reconnaissance vocale ---
-  const micEl = document.getElementById("mic");
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if(SpeechRecognition){
-    const recognition = new SpeechRecognition();
-    recognition.lang = "fr-FR";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    micEl.addEventListener("click", () => {
-      if(micEl.classList.contains("listening")){
-        recognition.stop();
-      } else {
-        recognition.start();
-        micEl.classList.add("listening");
-        inputEl.placeholder = "🎤 Je vous écoute...";
-      }
-    });
-
-    recognition.onresult = (e) => {
-      const texte = e.results[0][0].transcript;
-      inputEl.value = texte;
-      vientDuMicro = true;
-      micEl.classList.remove("listening");
-      inputEl.placeholder = "Votre question sur le camping...";
-    };
-
-    recognition.onerror = () => {
-      micEl.classList.remove("listening");
-      inputEl.placeholder = "Votre question sur le camping...";
-    };
-
-    recognition.onend = () => {
-      micEl.classList.remove("listening");
-      inputEl.placeholder = "Votre question sur le camping...";
-    };
+// ─── MODE JOUR / NUIT ───────────────────────────────────────────────────────
+function updateMode() {
+  const h = new Date().getHours();
+  const app  = document.getElementById('app');
+  const lj   = document.getElementById('l-jour');
+  const ln   = document.getElementById('l-nuit');
+  const isDay = (h >= 7 && h < 21);
+  if (isDay) {
+    app.classList.add('mode-jour');
+    lj.style.opacity = '1';
+    ln.style.opacity = '0';
   } else {
-    micEl.style.display = "none";
+    app.classList.remove('mode-jour');
+    lj.style.opacity = '0';
+    ln.style.opacity = '1';
   }
+  return isDay;
+}
+const estJour = updateMode();
+setInterval(updateMode, 60000);
+
+// ─── CHAT ───────────────────────────────────────────────────────────────────
+const chatZone  = document.getElementById('chat-zone');
+const inputEl   = document.getElementById('user-input');
+const sendBtn   = document.getElementById('send-btn');
+const micBtn    = document.getElementById('mic-btn');
+
+function addMsg(texte, role) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = texte.replace(/\n/g, '<br>');
+  chatZone.appendChild(div);
+  chatZone.scrollTop = chatZone.scrollHeight;
+  return div;
+}
+
+function showQuickBtns() {
+  const wrap = document.createElement('div');
+  wrap.className = 'quick-wrap';
+  ['⛺ Hébergements','💶 Tarifs','🐾 Animaux','📍 Accès'].forEach(label => {
+    const b = document.createElement('button');
+    b.className = 'qbtn';
+    b.textContent = label;
+    b.onclick = () => { wrap.remove(); envoyer(label.replace(/^.+? /, '')); };
+    wrap.appendChild(b);
+  });
+  chatZone.appendChild(wrap);
+  chatZone.scrollTop = chatZone.scrollHeight;
+}
+
+function showTyping() {
+  const d = document.createElement('div');
+  d.className = 'typing';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  chatZone.appendChild(d);
+  chatZone.scrollTop = chatZone.scrollHeight;
+  return d;
+}
+
+// Message d'accueil
+const salut = estJour ? 'Bonjour' : 'Bonsoir';
+addMsg(salut + ' ! 👋 Heureux de vous accueillir parmi nous.\n\nComment puis-je vous aider ?', 'bot');
+showQuickBtns();
+
+// ─── ENVOI ──────────────────────────────────────────────────────────────────
+async function envoyer(texteForce) {
+  const texte = (texteForce || inputEl.value).trim();
+  if (!texte) return;
+  inputEl.value = '';
+  sendBtn.disabled = true;
+
+  addMsg(texte, 'user');
+  const typing = showTyping();
+
+  try {
+    const resp = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: texte })
+    });
+    const data = await resp.json();
+    typing.remove();
+    addMsg(data.reponse || "Désolé, je n'ai pas pu répondre.", 'bot');
+  } catch {
+    typing.remove();
+    addMsg("Une erreur est survenue. Réessayez dans un instant.", 'bot');
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+}
+
+sendBtn.addEventListener('click', () => envoyer());
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') envoyer(); });
+
+// ─── MICRO (Web Speech API) ──────────────────────────────────────────────────
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'fr-FR';
+  rec.continuous = false;
+  rec.interimResults = false;
+  let recActive = false;
+
+  micBtn.addEventListener('click', () => {
+    if (recActive) { rec.stop(); return; }
+    rec.start();
+  });
+  rec.onstart = () => { recActive = true;  micBtn.classList.add('active'); };
+  rec.onend   = () => { recActive = false; micBtn.classList.remove('active'); };
+  rec.onresult = e => {
+    inputEl.value = e.results[0][0].transcript;
+    envoyer();
+  };
+} else {
+  micBtn.style.display = 'none';
+}
 </script>
 
 </body>
