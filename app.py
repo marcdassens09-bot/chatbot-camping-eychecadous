@@ -1,3 +1,4 @@
+from twilio.rest import Client as TwilioClient
 import os
 import re
 from flask import Flask, request, jsonify, render_template
@@ -94,6 +95,24 @@ Escalade = true si : client enerve, plainte, probleme technique repete, urgence.
         return json.loads(resultat.content[0].text.strip())
     except Exception:
         return {"escalade": False, "niveau": "faible", "raison": ""}
+
+
+def envoyer_whatsapp_anthony(message):
+    """Envoie une alerte WhatsApp à Anthony via Twilio."""
+    try:
+        import os
+        twilio_client = TwilioClient(
+            os.environ.get("TWILIO_ACCOUNT_SID"),
+            os.environ.get("TWILIO_AUTH_TOKEN")
+        )
+        twilio_client.messages.create(
+            from_="whatsapp:+14155238886",
+            to=os.environ.get("ANTHONY_WHATSAPP"),
+            body=message
+        )
+        print("WhatsApp envoyé à Anthony")
+    except Exception as e:
+        print(f"Erreur WhatsApp : {e}")
 
 def enregistrer_escalade(message, niveau, raison):
     from datetime import datetime
@@ -275,6 +294,10 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
         escalade = detecter_escalade(message_filtre, texte)
         if escalade.get("escalade"):
             enregistrer_escalade(message_filtre, escalade.get("niveau", "?"), escalade.get("raison", ""))
+            niveau = escalade.get("niveau", "faible")
+            raison = escalade.get("raison", "")
+            msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
+            envoyer_whatsapp_anthony(msg_anthony)
         return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
     except Exception as e:
         print(f"Erreur API chat : {e}")
