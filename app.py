@@ -1,4 +1,5 @@
-from twilio.rest import Client as TwilioClient
+# from twilio.rest import Client as TwilioClient
+# import calendar_service
 import os
 import re
 from flask import Flask, request, jsonify, render_template
@@ -6,7 +7,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import calendar_service
+
 
 load_dotenv()
 app = Flask(__name__)
@@ -70,9 +71,18 @@ def detecter_intention(message_brut):
             max_tokens=300,
             system="""Tu es un agent de clarification pour le chatbot du Camping Les Eychecadous.
 Tu reçois un message client brut (avec fautes, abréviations, formulation floue).
-Réponds UNIQUEMENT avec une phrase claire et complète qui reformule la demande.
-Exemple : "c ki pour 2 adultes 1 gamin aout" → "Quel est le tarif pour 2 adultes et 1 enfant en août ?"
-Ne réponds jamais à la question. Reformule seulement.""",
+
+Ton ton : chaleureux, accueillant, détendu. Comme si tu accueillais des vacanciers.
+Vouvoie toujours le client.
+
+Réponds UNIQUEMENT avec une phrase claire qui reformule la demande.
+Ne réponds jamais à la question. Reformule seulement.
+
+Exemples :
+"c ki pour 2 adultes 1 gamin aout" → "Vous souhaitez connaître le tarif pour 2 adultes et 1 enfant en août ?"
+"vous avez wifi" → "Vous voulez savoir si le camping dispose du WiFi ?"
+"piscine ouverte quand" → "Vous souhaitez savoir à quelle heure la piscine est ouverte ?"
+"""
             messages=[{"role": "user", "content": f"Message client : {message_brut}"}]
         )
         return resultat.content[0].text.strip()
