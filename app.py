@@ -171,9 +171,9 @@ def chat():
         if len(dates) >= 2:
             try:
                 # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
-                if dispo:
+                # if dispo:
                     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
-                else:
+                # else:
                     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
             except Exception as e:
                 print(f"Erreur calendrier : {e}")
