@@ -28,7 +28,7 @@ def enregistrer_question(question):
     with open("questions_log.txt", "a", encoding="utf-8") as f:
         f.write(f"{horodatage} | {question_propre}\n")
 
-from extraire_dates import extraire_dates
+# from extraire_dates import extraire_dates
 def extraire_dates_old(texte):
     """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
     import re
@@ -176,7 +176,7 @@ def chat():
     print(f"DEBUG message: {message}")
     mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
     if any(mot in message.lower() for mot in mots_cles):
-        dates = extraire_dates(message)
+        # dates = extraire_dates(message)
         print(f"DEBUG dates extraites: {dates}")
         if len(dates) >= 2:
             try:
@@ -316,8 +316,8 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
 @app.route("/test-calendrier")
 def test_calendrier():
     try:
-        from extraire_dates import extraire_dates
-        dates = extraire_dates("du 1 au 7 aout")
+        # from extraire_dates import extraire_dates
+        # dates = extraire_dates("du 1 au 7 aout")
         dispo = calendar_service.verifier_dispo(dates[0], dates[1])
         return jsonify({"dates": dates, "dispo": dispo})
     except Exception as e:
