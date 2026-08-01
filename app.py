@@ -28,7 +28,7 @@ def enregistrer_question(question):
         f.write(f"{horodatage} | {question_propre}\n")
 
 # # from extraire_dates import extraire_dates
-def extraire_dates_old(texte):
+# def extraire_dates_old(texte):
     """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
     import re
     from datetime import datetime
@@ -307,7 +307,7 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
 def test_calendrier():
     try:
         # # from extraire_dates import extraire_dates
-        dates = extraire_dates("du 1 au 7 aout")
+        # dates = extraire_dates("du 1 au 7 aout")
         # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
         return jsonify({"dates": dates, "dispo": dispo})
     except Exception as e:
