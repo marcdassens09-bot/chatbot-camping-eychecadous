@@ -1,4 +1,4 @@
-# from twilio.rest import Client as TwilioClient
+# # from twilio.rest import Client as TwilioClient
 import os
 import re
 from flask import Flask, request, jsonify, render_template
@@ -6,7 +6,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-# import calendar_service
+# # import calendar_service
 
 load_dotenv()
 app = Flask(__name__)
@@ -27,7 +27,7 @@ def enregistrer_question(question):
     with open("questions_log.txt", "a", encoding="utf-8") as f:
         f.write(f"{horodatage} | {question_propre}\n")
 
-# from extraire_dates import extraire_dates
+# # from extraire_dates import extraire_dates
 def extraire_dates_old(texte):
     """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
     import re
@@ -101,15 +101,15 @@ def envoyer_whatsapp_anthony(message):
     """Envoie une alerte WhatsApp à Anthony via Twilio."""
     try:
         import os
-        twilio_client = TwilioClient(
-            os.environ.get("TWILIO_ACCOUNT_SID"),
-            os.environ.get("TWILIO_AUTH_TOKEN")
-        )
-        twilio_client.messages.create(
-            from_="whatsapp:+14155238886",
-            to=os.environ.get("ANTHONY_WHATSAPP"),
-            body=message
-        )
+        # twilio_client = TwilioClient(
+            # os.environ.get("TWILIO_ACCOUNT_SID"),
+            # os.environ.get("TWILIO_AUTH_TOKEN")
+        # )
+        # twilio_client.messages.create(
+            # from_="whatsapp:+14155238886",
+            # to=os.environ.get("ANTHONY_WHATSAPP"),
+            # body=message
+        # )
         print("WhatsApp envoyé à Anthony")
     except Exception as e:
         print(f"Erreur WhatsApp : {e}")
@@ -166,11 +166,11 @@ def chat():
     print(f"DEBUG message: {message}")
     mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
     if any(mot in message.lower() for mot in mots_cles):
-        dates = extraire_dates(message)
+        # dates = extraire_dates(message)
         print(f"DEBUG dates extraites: {dates}")
         if len(dates) >= 2:
             try:
-                dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+                # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
                 if dispo:
                     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
                 else:
@@ -179,7 +179,7 @@ def chat():
                 print(f"Erreur calendrier : {e}")
         elif len(dates) == 1:
             try:
-                reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
+                # reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
                 info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
             except Exception as e:
                 print(f"Erreur calendrier : {e}")
@@ -306,9 +306,9 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
 @app.route("/test-calendrier")
 def test_calendrier():
     try:
-        # from extraire_dates import extraire_dates
+        # # from extraire_dates import extraire_dates
         dates = extraire_dates("du 1 au 7 aout")
-        dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+        # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
         return jsonify({"dates": dates, "dispo": dispo})
     except Exception as e:
         return jsonify({"erreur": str(e)})
