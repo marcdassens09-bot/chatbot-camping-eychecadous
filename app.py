@@ -328,12 +328,16 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
             raison = escalade.get("raison", "")
             msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
             envoyer_whatsapp_anthony(msg_anthony)
-        return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
+        if texte:
+            return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
+        else:
+            return jsonify({"reponse": "Pas de réponse du chatbot."}), 500
     except Exception as e:
         import traceback
         print(f"Erreur chat globale : {e}")
         traceback.print_exc()
-        return jsonify({"reponse": f"Erreur: {str(e)}", "erreur": str(e)}), 500
+        err_msg = str(e) if e else "Erreur inconnue"
+        return jsonify({"reponse": f"Désolé, erreur technique. Merci de réessayer.", "erreur": err_msg}), 500
 
 @app.route("/test-calendrier")
 def test_calendrier():
