@@ -142,6 +142,23 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/diagnose")
+def diagnose():
+    try:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            return jsonify({"status": "ERROR", "message": "ANTHROPIC_API_KEY non configurée"}), 500
+
+        test_response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=50,
+            messages=[{"role": "user", "content": "Réponds simplement par 'OK'"}]
+        )
+        return jsonify({"status": "OK", "message": "Connexion Anthropic fonctionnelle", "model": "claude-sonnet-4-6"})
+    except Exception as e:
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
 @app.route("/rapport")
 def rapport():
     cle = request.args.get("cle", "")
@@ -152,10 +169,13 @@ def rapport():
 @app.route("/chat", methods=["POST"])
 @limiter.limit("10 per minute")
 def chat():
-    message = request.json.get("message")
+    message = request.json.get("message", "").strip() if request.json else ""
+    if not message:
+        return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
+
     if message:
         enregistrer_question(message)
-    if message and len(message) > 500:
+    if len(message) > 500:
         return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
     message_clarifie = detecter_intention(message)
