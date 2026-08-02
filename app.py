@@ -249,10 +249,18 @@ def chat():
                 except Exception as e:
                     print(f"Erreur calendrier : {e}")
 
+        user_content = str(message_filtre or "") + str(info_calendrier or "")
+        if not user_content.strip():
+            user_content = "Bonjour"
+
         historique.append({
             "role": "user",
-            "content": message_filtre + info_calendrier
+            "content": user_content
         })
+
+        if len(historique) > 20:
+            historique = historique[-20:]
+
         reponse = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=500,
