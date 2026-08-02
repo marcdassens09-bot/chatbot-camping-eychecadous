@@ -11,7 +11,7 @@ from flask_limiter.util import get_remote_address
 load_dotenv()
 app = Flask(__name__)
 limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY").strip())
+client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
 historique = []
 
 def filtrer_donnees_sensibles(texte):
@@ -167,20 +167,23 @@ def chat():
     mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
     if any(mot in message.lower() for mot in mots_cles):
         # dates = extraire_dates(message)
+        dates = []
         print(f"DEBUG dates extraites: {dates}")
         if len(dates) >= 2:
             try:
                 # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
                 # if dispo:
-                    info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
+                #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
                 # else:
-                    info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
+                #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
+                pass
             except Exception as e:
                 print(f"Erreur calendrier : {e}")
         elif len(dates) == 1:
             try:
                 # reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
-                info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
+                # info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
+                pass
             except Exception as e:
                 print(f"Erreur calendrier : {e}")
 
@@ -309,6 +312,8 @@ def test_calendrier():
         # # from extraire_dates import extraire_dates
         # dates = extraire_dates("du 1 au 7 aout")
         # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+        dates = []
+        dispo = None
         return jsonify({"dates": dates, "dispo": dispo})
     except Exception as e:
         return jsonify({"erreur": str(e)})
