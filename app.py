@@ -26,7 +26,12 @@ def enregistrer_question(question):
     try:
         from datetime import datetime
         horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
-        question_propre = filtrer_donnees_sensibles(question)
+        if not question or not isinstance(question, str):
+            question = str(question or "")
+        try:
+            question_propre = filtrer_donnees_sensibles(question)
+        except:
+            question_propre = question
         with open("questions_log.txt", "a", encoding="utf-8") as f:
             f.write(f"{horodatage} | {question_propre}\n")
     except Exception as e:
