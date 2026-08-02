@@ -175,16 +175,17 @@ def rapport():
 @app.route("/chat", methods=["POST"])
 @limiter.limit("10 per minute")
 def chat():
-    message = request.json.get("message", "").strip() if request.json else ""
-    if not message:
-        return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
+    try:
+        message = request.json.get("message", "").strip() if request.json else ""
+        if not message:
+            return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
 
-    if message:
-        enregistrer_question(message)
-    if len(message) > 500:
-        return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
+        if message:
+            enregistrer_question(message)
+        if len(message) > 500:
+            return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
-    message_clarifie = detecter_intention(message)
+        message_clarifie = detecter_intention(message)
     message_filtre = filtrer_donnees_sensibles(message_clarifie)
 
     # Vérification calendrier si le message parle de dispo/réservation
@@ -328,9 +329,14 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
             msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
             envoyer_whatsapp_anthony(msg_anthony)
         return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
+        except Exception as e:
+            print(f"Erreur API chat : {e}")
+            return jsonify({"reponse": "Desole, je rencontre un probleme technique. Merci de reessayer dans quelques instants."}), 500
     except Exception as e:
-        print(f"Erreur API chat : {e}")
-        return jsonify({"reponse": "Desole, je rencontre un probleme technique. Merci de reessayer dans quelques instants."}), 500
+        import traceback
+        print(f"Erreur chat globale : {e}")
+        traceback.print_exc()
+        return jsonify({"reponse": f"Erreur: {str(e)}", "erreur": str(e)}), 500
 
 @app.route("/test-calendrier")
 def test_calendrier():
