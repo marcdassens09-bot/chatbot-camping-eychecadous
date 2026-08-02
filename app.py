@@ -176,6 +176,8 @@ def rapport():
 @limiter.limit("10 per minute")
 def chat():
     try:
+        texte = ""
+        escalade = {}
         message = request.json.get("message", "").strip() if request.json else ""
         if not message:
             return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
