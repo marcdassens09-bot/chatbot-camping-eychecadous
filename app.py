@@ -15,6 +15,8 @@ client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
 historique = []
 
 def filtrer_donnees_sensibles(texte):
+    if not texte or not isinstance(texte, str):
+        return str(texte) if texte else ""
     texte = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[EMAIL MASQUE]', texte)
     texte = re.sub(r'\b0[1-9](\s?\d{2}){4}\b', '[TELEPHONE MASQUE]', texte)
     texte = re.sub(r'\b(?:\d[ -]?){13,16}\b', '[CARTE MASQUEE]', texte)
