@@ -167,6 +167,37 @@ def diagnose():
         return jsonify({"status": "ERROR", "message": str(e)}), 500
 
 
+@app.route("/test-chat", methods=["POST"])
+def test_chat():
+    try:
+        tests = {}
+
+        # Test 1: Filtrer données
+        try:
+            result = filtrer_donnees_sensibles("Test email@example.com")
+            tests["filtrer_donnees_sensibles"] = "OK"
+        except Exception as e:
+            tests["filtrer_donnees_sensibles"] = f"ERROR: {str(e)}"
+
+        # Test 2: Détecter intention
+        try:
+            result = detecter_intention("Test message")
+            tests["detecter_intention"] = f"OK: {result[:50]}"
+        except Exception as e:
+            tests["detecter_intention"] = f"ERROR: {str(e)}"
+
+        # Test 3: Détecter escalade
+        try:
+            result = detecter_escalade("Test", "Réponse")
+            tests["detecter_escalade"] = f"OK: {result}"
+        except Exception as e:
+            tests["detecter_escalade"] = f"ERROR: {str(e)}"
+
+        return jsonify({"tests": tests})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/rapport")
 def rapport():
     cle = request.args.get("cle", "")
