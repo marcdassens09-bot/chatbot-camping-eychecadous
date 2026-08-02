@@ -23,8 +23,8 @@ def filtrer_donnees_sensibles(texte):
     return texte
 
 def enregistrer_question(question):
-    # Désactivé - problème avec filtrer_donnees_sensibles sur Render
-    pass
+    # Complètement désactivé pour éviter les erreurs Render
+    return None
 
 # # from extraire_dates import extraire_dates
 # def extraire_dates_old(texte):
