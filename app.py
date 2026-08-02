@@ -186,40 +186,38 @@ def chat():
             return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
         message_clarifie = detecter_intention(message)
-    message_filtre = filtrer_donnees_sensibles(message_clarifie)
+        message_filtre = filtrer_donnees_sensibles(message_clarifie)
 
-    # Vérification calendrier si le message parle de dispo/réservation
-    info_calendrier = ""
-    print(f"DEBUG message: {message}")
-    mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
-    if any(mot in message.lower() for mot in mots_cles):
-        # dates = extraire_dates(message)
-        dates = []
-        print(f"DEBUG dates extraites: {dates}")
-        if len(dates) >= 2:
-            try:
-                # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
-                # if dispo:
-                #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
-                # else:
-                #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
-                pass
-            except Exception as e:
-                print(f"Erreur calendrier : {e}")
-        elif len(dates) == 1:
-            try:
-                # reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
-                # info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
-                pass
-            except Exception as e:
-                print(f"Erreur calendrier : {e}")
+        # Vérification calendrier si le message parle de dispo/réservation
+        info_calendrier = ""
+        print(f"DEBUG message: {message}")
+        mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
+        if any(mot in message.lower() for mot in mots_cles):
+            # dates = extraire_dates(message)
+            dates = []
+            print(f"DEBUG dates extraites: {dates}")
+            if len(dates) >= 2:
+                try:
+                    # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
+                    # if dispo:
+                    #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
+                    # else:
+                    #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
+                    pass
+                except Exception as e:
+                    print(f"Erreur calendrier : {e}")
+            elif len(dates) == 1:
+                try:
+                    # reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
+                    # info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
+                    pass
+                except Exception as e:
+                    print(f"Erreur calendrier : {e}")
 
-    historique.append({
-        "role": "user",
-        "content": message_filtre + info_calendrier
-    })
-
-    try:
+        historique.append({
+            "role": "user",
+            "content": message_filtre + info_calendrier
+        })
         reponse = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=500,
@@ -329,9 +327,6 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
             msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
             envoyer_whatsapp_anthony(msg_anthony)
         return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
-        except Exception as e:
-            print(f"Erreur API chat : {e}")
-            return jsonify({"reponse": "Desole, je rencontre un probleme technique. Merci de reessayer dans quelques instants."}), 500
     except Exception as e:
         import traceback
         print(f"Erreur chat globale : {e}")
