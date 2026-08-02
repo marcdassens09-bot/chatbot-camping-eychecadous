@@ -220,8 +220,9 @@ def chat():
         if not message:
             return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
 
-        if message:
-            enregistrer_question(message)
+        # Désactivé temporairement pour déboguer
+        # if message:
+        #     enregistrer_question(message)
         if len(message) > 500:
             return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
