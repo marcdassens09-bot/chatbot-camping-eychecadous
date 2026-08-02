@@ -221,9 +221,8 @@ def chat():
         if not message:
             return jsonify({"reponse": "Message vide. Merci de poser une question."}), 400
 
-        # Désactivé temporairement pour déboguer
-        # if message:
-        #     enregistrer_question(message)
+        if message:
+            enregistrer_question(message)
         if len(message) > 500:
             return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
@@ -274,7 +273,10 @@ def chat():
             system="""REGLES ABSOLUES - A RESPECTER SANS EXCEPTION :
 1. DRAPS ET LINGE : aucun drap, linge, serviette ni literie n est fourni pour AUCUN hebergement. Ni emplacements, ni mobil-homes, ni bungalows. Reponse obligatoire : "Aucun linge n est fourni, pensez a apporter votre literie."
 2. EMAIL : toujours campingartigat@gmail.com - jamais gmail
-3. ANNULATION : basse saison = 48h avant l arrivee. Haute saison = 3 semaines avant l arrivee.
+3. ANNULATION INTELLIGENTE :
+   - Basse saison : annulation possible jusqu a 48h avant l arrivee
+   - Haute saison (juillet-aout) : annulation possible jusqu a 3 semaines avant l arrivee
+   - IMPORTANT : Si le client demande une annulation pour une date TRES proche (moins de 3 semaines en haute saison ou moins de 48h en basse saison), explique clairement que l annulation n est PLUS POSSIBLE car le delai a ete depasse. Sois sympathique mais ferme.
 4. CALENDRIER : si le message contient [CALENDRIER], utilise cette info pour repondre precisement sur les disponibilites.
 
 Tu es l assistant virtuel du Camping Les Eychecadous, a Artigat en Ariege (09130).
