@@ -21,11 +21,14 @@ def filtrer_donnees_sensibles(texte):
     return texte
 
 def enregistrer_question(question):
-    from datetime import datetime
-    horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
-    question_propre = filtrer_donnees_sensibles(question)
-    with open("questions_log.txt", "a", encoding="utf-8") as f:
-        f.write(f"{horodatage} | {question_propre}\n")
+    try:
+        from datetime import datetime
+        horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
+        question_propre = filtrer_donnees_sensibles(question)
+        with open("questions_log.txt", "a", encoding="utf-8") as f:
+            f.write(f"{horodatage} | {question_propre}\n")
+    except Exception as e:
+        print(f"Impossible d'enregistrer la question: {e}")
 
 # # from extraire_dates import extraire_dates
 # def extraire_dates_old(texte):
@@ -115,10 +118,13 @@ def envoyer_whatsapp_anthony(message):
         print(f"Erreur WhatsApp : {e}")
 
 def enregistrer_escalade(message, niveau, raison):
-    from datetime import datetime
-    horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
-    with open("escalades_log.txt", "a", encoding="utf-8") as f:
-        f.write(f"{horodatage} | NIVEAU:{niveau} | {raison} | MSG: {message[:100]}\n")
+    try:
+        from datetime import datetime
+        horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
+        with open("escalades_log.txt", "a", encoding="utf-8") as f:
+            f.write(f"{horodatage} | NIVEAU:{niveau} | {raison} | MSG: {message[:100]}\n")
+    except Exception as e:
+        print(f"Impossible d'enregistrer l'escalade: {e}")
 
 def generer_rapport_hebdo():
     try:
