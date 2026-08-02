@@ -213,6 +213,7 @@ def rapport():
 @app.route("/chat", methods=["POST"])
 @limiter.limit("10 per minute")
 def chat():
+    global historique
     try:
         texte = ""
         escalade = {}
