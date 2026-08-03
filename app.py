@@ -1,7 +1,7 @@
 # # from twilio.rest import Client as TwilioClient
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlencode
 from flask import Flask, request, jsonify, render_template
 from anthropic import Anthropic
@@ -32,36 +32,64 @@ def enregistrer_question(question):
     # Complètement désactivé pour éviter les erreurs Render
     return None
 
-from extraire_dates import extraire_dates
+from extraire_dates import extraire_dates, MOIS
 
 BASE_RESERVATION = "https://reservation.secureholiday.net/fr/5438/search/product-list"
+CALENDRIER_SAISON = "https://reservation.secureholiday.net/fr/5438/availabilities"
+
+# Duree retenue quand le client ne donne qu'une date d'arrivee. SecureHoliday
+# utilise lui-meme "Semaine" comme duree par defaut ; le client peut la changer
+# sur la page.
+NUITS_PAR_DEFAUT = 7
 
 
 def lien_reservation(dates):
-    """Construit un lien SecureHoliday avec les dates pre-remplies.
+    """Construit un lien SecureHoliday a partir des dates trouvees dans le message.
 
     dates : liste de chaines 'YYYY-MM-DD' renvoyee par extraire_dates().
-    Retourne l'URL, ou None si les dates sont inexploitables.
 
-    Le tunnel SecureHoliday accepte dateStart et dateEnd au format JJ/MM/AAAA
-    url-encode. Il affiche alors les hebergements reellement disponibles pour
-    la periode, avec leurs prix. C'est SecureHoliday qui repond sur la
-    disponibilite, jamais le bot.
+    - deux dates ou plus -> recherche sur la periode exacte
+    - une seule date     -> arrivee + NUITS_PAR_DEFAUT nuits
+    - aucune date        -> None (voir lien_calendrier_saison)
+
+    Le tunnel accepte dateStart et dateEnd au format JJ/MM/AAAA url-encode et
+    affiche les hebergements reellement disponibles, avec leurs prix. C'est
+    SecureHoliday qui repond sur la disponibilite, jamais le bot.
     """
-    if not dates or len(dates) < 2:
+    if not dates:
         return None
     try:
         arrivee = datetime.strptime(dates[0], "%Y-%m-%d")
-        depart = datetime.strptime(dates[1], "%Y-%m-%d")
     except (ValueError, TypeError):
         return None
-    if depart <= arrivee:
-        return None
+
+    if len(dates) >= 2:
+        try:
+            depart = datetime.strptime(dates[1], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            return None
+        if depart <= arrivee:
+            return None
+    else:
+        depart = arrivee + timedelta(days=NUITS_PAR_DEFAUT)
+
     parametres = urlencode({
         "dateStart": arrivee.strftime("%d/%m/%Y"),
         "dateEnd": depart.strftime("%d/%m/%Y"),
     })
     return f"{BASE_RESERVATION}?{parametres}"
+
+
+def mois_evoque(texte):
+    """Retourne True si le message cite un mois sans date chiffree exploitable.
+
+    Couvre les demandes du type "vous avez de la place en aout ?", frequentes,
+    pour lesquelles on peut au moins ouvrir le calendrier de la saison.
+    """
+    if not texte:
+        return False
+    bas = texte.lower()
+    return any(re.search(r'\b' + m + r'\b', bas) for m in MOIS)
 
 
 def detecter_intention(message_brut):
@@ -230,10 +258,21 @@ def chat():
             try:
                 dates = extraire_dates(message)
                 lien = lien_reservation(dates)
-                if lien:
+                if lien and len(dates) >= 2:
                     info_reservation = (
                         f"\n\n[RESERVATION] Dates detectees : du {dates[0]} au {dates[1]}. "
                         f"Lien a transmettre au client : {lien}"
+                    )
+                elif lien:
+                    info_reservation = (
+                        f"\n\n[RESERVATION] Une seule date detectee ({dates[0]}), le lien part "
+                        f"donc sur {NUITS_PAR_DEFAUT} nuits par defaut. Precise au client qu il "
+                        f"peut ajuster la duree sur la page. Lien : {lien}"
+                    )
+                elif mois_evoque(message):
+                    info_reservation = (
+                        f"\n\n[RESERVATION] Aucune date precise, mais un mois est evoque. "
+                        f"Lien vers le calendrier de la saison : {CALENDRIER_SAISON}"
                     )
             except Exception as e:
                 print(f"Erreur construction lien reservation : {e}")
@@ -261,7 +300,11 @@ def chat():
    - Haute saison (juillet-aout) : annulation possible jusqu a 3 semaines avant l arrivee
    - IMPORTANT : Si le client demande une annulation pour une date TRES proche (moins de 3 semaines en haute saison ou moins de 48h en basse saison), explique clairement que l annulation n est PLUS POSSIBLE car le delai a ete depasse. Sois sympathique mais ferme.
 4. DISPONIBILITES : tu n as JAMAIS acces aux disponibilites. Ne dis jamais qu une date est libre ou complete, meme si le client insiste.
-5. LIEN DE RESERVATION : si le message contient [RESERVATION], termine ta reponse en donnant le lien fourni, tel quel, avec une phrase du type : "Vous pouvez consulter les disponibilites et les tarifs pour ces dates ici : <lien>". Ce lien ouvre directement le calendrier de reservation aux dates demandees. Ne promets rien sur la disponibilite : la page l affichera au client. Si le message ne contient pas [RESERVATION], invite simplement le client a consulter www.campingartigat.com ou a appeler le 05 67 44 51 65.
+5. LIEN DE RESERVATION : si le message contient [RESERVATION], termine ta reponse en donnant le lien fourni, tel quel, sans le modifier. Ne promets rien sur la disponibilite : la page l affichera au client.
+   - Si le bloc mentionne deux dates : "Vous pouvez consulter les disponibilites et les tarifs pour ces dates ici : <lien>"
+   - Si le bloc signale une seule date : donne le lien en precisant que la recherche porte sur une semaine par defaut et que le client peut ajuster la duree directement sur la page.
+   - Si le bloc renvoie vers le calendrier de la saison : donne le lien en invitant le client a choisir ses dates dessus.
+   Si le message ne contient pas [RESERVATION], invite simplement le client a consulter www.campingartigat.com ou a appeler le 05 67 44 51 65.
 
 Tu es l assistant virtuel du Camping Les Eychecadous, a Artigat en Ariege (09130).
 Tu reponds aux questions des visiteurs de facon professionnelle, chaleureuse et concise.

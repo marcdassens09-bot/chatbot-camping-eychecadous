@@ -30,4 +30,17 @@ def extraire_dates(texte):
             dates.append(f"{annee}-{int(m[1]):02d}-{int(m[0]):02d}")
         except:
             pass
+    if dates:
+        return dates
+
+    # Date seule en toutes lettres : "le 15 aout", "j'arrive le 3 juillet".
+    # Le jour doit coller au nom du mois, ce qui evite d'attraper les nombres
+    # sans rapport : "4 personnes en aout" ne matche pas.
+    pattern3 = r'(\d{1,2})\s+(' + '|'.join(MOIS.keys()) + r')\b'
+    m3 = re.search(pattern3, texte_lower)
+    if m3:
+        jour, mois = int(m3.group(1)), MOIS[m3.group(2)]
+        if 1 <= jour <= 31:
+            dates.append(f"{annee}-{mois:02d}-{jour:02d}")
+
     return dates
