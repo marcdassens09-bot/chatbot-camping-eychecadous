@@ -148,9 +148,9 @@ def envoyer_whatsapp_anthony(message):
             # to=os.environ.get("ANTHONY_WHATSAPP"),
             # body=message
         # )
-        print("WhatsApp envoyé à Anthony")
+        print("WhatsApp envoyé à Anthony", flush=True)
     except Exception as e:
-        print(f"Erreur WhatsApp : {e}")
+        print(f"Erreur WhatsApp : {e}", flush=True)
 
 def enregistrer_escalade(message, niveau, raison):
     try:
@@ -159,7 +159,7 @@ def enregistrer_escalade(message, niveau, raison):
         with open("escalades_log.txt", "a", encoding="utf-8") as f:
             f.write(f"{horodatage} | NIVEAU:{niveau} | {raison} | MSG: {message[:100]}\n")
     except Exception as e:
-        print(f"Impossible d'enregistrer l'escalade: {e}")
+        print(f"Impossible d'enregistrer l'escalade: {e}", flush=True)
 
 def generer_rapport_hebdo():
     try:
@@ -284,7 +284,7 @@ def chat():
                         f"Lien vers le calendrier de la saison : {CALENDRIER_SAISON}"
                     )
             except Exception as e:
-                print(f"Erreur construction lien reservation : {e}")
+                print(f"Erreur construction lien reservation : {e}", flush=True)
 
         user_content = str(message_filtre or "") + str(info_reservation or "")
         if not user_content.strip():
@@ -421,7 +421,7 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
             return jsonify({"reponse": "Pas de réponse du chatbot."}), 500
     except Exception as e:
         import traceback
-        print(f"Erreur chat globale : {e}")
+        print(f"Erreur chat globale : {e}", flush=True)
         traceback.print_exc()
         err_msg = str(e) if e else "Erreur inconnue"
         return jsonify({"reponse": f"Désolé, erreur technique. Merci de réessayer.", "erreur": err_msg}), 500
