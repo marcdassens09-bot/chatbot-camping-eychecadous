@@ -441,8 +441,7 @@ def test_calendrier():
 @app.route("/effacer", methods=["POST"])
 def effacer():
     session_id = request.json.get("session_id", "default") if request.json else "default"
-    historique = conversation_store.setdefault(session_id, [])
-    historique = []
+    conversation_store.pop(session_id, None)
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
