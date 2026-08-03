@@ -18,7 +18,7 @@ load_dotenv()
 app = Flask(__name__)
 limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
 client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
-historique = []
+conversation_store = {}
 
 def filtrer_donnees_sensibles(texte):
     if not texte or not isinstance(texte, str):
@@ -241,7 +241,8 @@ def rapport():
 @app.route("/chat", methods=["POST"])
 @limiter.limit("10 per minute")
 def chat():
-    global historique
+    session_id = request.json.get("session_id", "default") if request.json else "default"
+    historique = conversation_store.setdefault(session_id, [])
     try:
         texte = ""
         escalade = {}
@@ -295,7 +296,8 @@ def chat():
         })
 
         if len(historique) > 20:
-            historique = historique[-20:]
+            conversation_store[session_id] = historique[-20:]
+            historique = conversation_store[session_id]
 
         reponse = client.messages.create(
             model="claude-sonnet-4-6",
@@ -438,7 +440,8 @@ def test_calendrier():
 
 @app.route("/effacer", methods=["POST"])
 def effacer():
-    global historique
+    session_id = request.json.get("session_id", "default") if request.json else "default"
+    historique = conversation_store.setdefault(session_id, [])
     historique = []
     return jsonify({"status": "ok"})
 
