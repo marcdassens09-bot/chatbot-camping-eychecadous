@@ -1,11 +1,17 @@
 # # from twilio.rest import Client as TwilioClient
 import os
 import re
+from datetime import datetime
+from urllib.parse import urlencode
 from flask import Flask, request, jsonify, render_template
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+# NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
+# verifie le 03/08/2026). verifier_dispo() renvoie True des que l'agenda est
+# vide, donc le bot annoncerait "disponible" pour toutes les dates sans exception.
+# La source de verite des reservations est SecureHoliday, pas Google Agenda.
 # # import calendar_service
 
 load_dotenv()
@@ -26,39 +32,36 @@ def enregistrer_question(question):
     # Complètement désactivé pour éviter les erreurs Render
     return None
 
-# # from extraire_dates import extraire_dates
-# def extraire_dates_old(texte):
-    """Cherche des dates au format JJ/MM, JJ-MM, ou 'du X au Y mois'"""
-    import re
-    from datetime import datetime
-    annee = datetime.now().year
-    pattern = r'(\d{1,2})[\/\-\s](?:au\s+)?(\d{1,2})[\/\-\s]?(\d{2,4})?'
-    matches = re.findall(pattern, texte)
-    dates = []
-    for m in matches:
-        try:
-            jour = int(m[0])
-            mois = int(m[1])
-            an = int(m[2]) if m[2] else annee
-            if an < 100:
-                an += 2000
-            dates.append(f"{an}-{mois:02d}-{jour:02d}")
-        except:
-            pass
-    mois_noms = {
-        'janvier':1,'fevrier':2,'février':2,'mars':3,'avril':4,'mai':5,'juin':6,
-        'juillet':7,'aout':8,'août':8,'septembre':9,'octobre':10,'novembre':11,'decembre':12,'décembre':12
-    }
-    pattern2 = r'(\d{1,2})\s+(?:au\s+\d{1,2}\s+)?(' + '|'.join(mois_noms.keys()) + r')'
-    matches2 = re.findall(pattern2, texte.lower())
-    for m in matches2:
-        try:
-            jour = int(m[0])
-            mois = mois_noms[m[1]]
-            dates.append(f"{annee}-{mois:02d}-{jour:02d}")
-        except:
-            pass
-    return dates
+from extraire_dates import extraire_dates
+
+BASE_RESERVATION = "https://reservation.secureholiday.net/fr/5438/search/product-list"
+
+
+def lien_reservation(dates):
+    """Construit un lien SecureHoliday avec les dates pre-remplies.
+
+    dates : liste de chaines 'YYYY-MM-DD' renvoyee par extraire_dates().
+    Retourne l'URL, ou None si les dates sont inexploitables.
+
+    Le tunnel SecureHoliday accepte dateStart et dateEnd au format JJ/MM/AAAA
+    url-encode. Il affiche alors les hebergements reellement disponibles pour
+    la periode, avec leurs prix. C'est SecureHoliday qui repond sur la
+    disponibilite, jamais le bot.
+    """
+    if not dates or len(dates) < 2:
+        return None
+    try:
+        arrivee = datetime.strptime(dates[0], "%Y-%m-%d")
+        depart = datetime.strptime(dates[1], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+    if depart <= arrivee:
+        return None
+    parametres = urlencode({
+        "dateStart": arrivee.strftime("%d/%m/%Y"),
+        "dateEnd": depart.strftime("%d/%m/%Y"),
+    })
+    return f"{BASE_RESERVATION}?{parametres}"
 
 
 def detecter_intention(message_brut):
@@ -218,33 +221,24 @@ def chat():
         message_clarifie = detecter_intention(message)
         message_filtre = filtrer_donnees_sensibles(message_clarifie)
 
-        # Vérification calendrier si le message parle de dispo/réservation
-        info_calendrier = ""
-        print(f"DEBUG message: {message}")
+        # Si le message evoque un sejour, on prepare un lien SecureHoliday avec
+        # les dates pre-remplies. Le bot n'affirme jamais de disponibilite :
+        # c'est SecureHoliday qui l'affiche au client, en temps reel.
+        info_reservation = ""
         mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
         if any(mot in message.lower() for mot in mots_cles):
-            # dates = extraire_dates(message)
-            dates = []
-            print(f"DEBUG dates extraites: {dates}")
-            if len(dates) >= 2:
-                try:
-                    # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
-                    # if dispo:
-                    #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est DISPONIBLE selon le calendrier de réservation."
-                    # else:
-                    #     info_calendrier = f"\n\n[CALENDRIER] Le créneau du {dates[0]} au {dates[1]} est COMPLET selon le calendrier de réservation."
-                    pass
-                except Exception as e:
-                    print(f"Erreur calendrier : {e}")
-            elif len(dates) == 1:
-                try:
-                    # reservations = calendar_service.get_reservations_mois(int(dates[0][:4]), int(dates[0][5:7]))
-                    # info_calendrier = f"\n\n[CALENDRIER] Il y a {len(reservations)} réservation(s) ce mois-là."
-                    pass
-                except Exception as e:
-                    print(f"Erreur calendrier : {e}")
+            try:
+                dates = extraire_dates(message)
+                lien = lien_reservation(dates)
+                if lien:
+                    info_reservation = (
+                        f"\n\n[RESERVATION] Dates detectees : du {dates[0]} au {dates[1]}. "
+                        f"Lien a transmettre au client : {lien}"
+                    )
+            except Exception as e:
+                print(f"Erreur construction lien reservation : {e}")
 
-        user_content = str(message_filtre or "") + str(info_calendrier or "")
+        user_content = str(message_filtre or "") + str(info_reservation or "")
         if not user_content.strip():
             user_content = "Bonjour"
 
@@ -266,7 +260,8 @@ def chat():
    - Basse saison : annulation possible jusqu a 48h avant l arrivee
    - Haute saison (juillet-aout) : annulation possible jusqu a 3 semaines avant l arrivee
    - IMPORTANT : Si le client demande une annulation pour une date TRES proche (moins de 3 semaines en haute saison ou moins de 48h en basse saison), explique clairement que l annulation n est PLUS POSSIBLE car le delai a ete depasse. Sois sympathique mais ferme.
-4. CALENDRIER : si le message contient [CALENDRIER], utilise cette info pour repondre precisement sur les disponibilites.
+4. DISPONIBILITES : tu n as JAMAIS acces aux disponibilites. Ne dis jamais qu une date est libre ou complete, meme si le client insiste.
+5. LIEN DE RESERVATION : si le message contient [RESERVATION], termine ta reponse en donnant le lien fourni, tel quel, avec une phrase du type : "Vous pouvez consulter les disponibilites et les tarifs pour ces dates ici : <lien>". Ce lien ouvre directement le calendrier de reservation aux dates demandees. Ne promets rien sur la disponibilite : la page l affichera au client. Si le message ne contient pas [RESERVATION], invite simplement le client a consulter www.campingartigat.com ou a appeler le 05 67 44 51 65.
 
 Tu es l assistant virtuel du Camping Les Eychecadous, a Artigat en Ariege (09130).
 Tu reponds aux questions des visiteurs de facon professionnelle, chaleureuse et concise.
