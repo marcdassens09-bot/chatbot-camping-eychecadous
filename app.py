@@ -424,20 +424,7 @@ Si tu ne connais pas la reponse, contactez : Tel 05 67 44 51 65 | Email campinga
         print(f"Erreur chat globale : {e}", flush=True)
         traceback.print_exc()
         err_msg = str(e) if e else "Erreur inconnue"
-        return jsonify({"reponse": f"Désolé, erreur technique. Merci de réessayer.", "erreur": err_msg}), 500
-
-@app.route("/test-calendrier")
-def test_calendrier():
-    try:
-        # # from extraire_dates import extraire_dates
-        # dates = extraire_dates("du 1 au 7 aout")
-        # dispo = calendar_service.verifier_dispo(dates[0], dates[1])
-        dates = []
-        dispo = None
-        return jsonify({"dates": dates, "dispo": dispo})
-    except Exception as e:
-        return jsonify({"erreur": str(e)})
-
+    return jsonify({"reponse": f"Désolé, erreur technique. Merci de réessayer.", "erreur": err_msg}), 500
 @app.route("/effacer", methods=["POST"])
 def effacer():
     session_id = request.json.get("session_id", "default") if request.json else "default"
