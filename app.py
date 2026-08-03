@@ -37,6 +37,14 @@ from extraire_dates import extraire_dates, MOIS
 BASE_RESERVATION = "https://reservation.secureholiday.net/fr/5438/search/product-list"
 CALENDRIER_SAISON = "https://reservation.secureholiday.net/fr/5438/availabilities"
 
+# Mots qui signalent une demande de sejour. Les noms de mois viennent de MOIS
+# pour que les douze soient couverts : la liste ecrite a la main n'en contenait
+# que quatre, et laissait passer "je viens en mai".
+MOTS_CLES_SEJOUR = [
+    "dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour",
+    "arrivée", "arrivee", "nuit", "semaine", "week-end", "weekend",
+] + list(MOIS.keys())
+
 # Duree retenue quand le client ne donne qu'une date d'arrivee. SecureHoliday
 # utilise lui-meme "Semaine" comme duree par defaut ; le client peut la changer
 # sur la page.
@@ -253,7 +261,7 @@ def chat():
         # les dates pre-remplies. Le bot n'affirme jamais de disponibilite :
         # c'est SecureHoliday qui l'affiche au client, en temps reel.
         info_reservation = ""
-        mots_cles = ["dispo", "disponible", "place", "réserver", "reserver", "séjour", "sejour", "arrivée", "arrivee", "nuit", "semaine", "août", "aout", "juillet", "juin", "septembre"]
+        mots_cles = MOTS_CLES_SEJOUR
         if any(mot in message.lower() for mot in mots_cles):
             try:
                 dates = extraire_dates(message)

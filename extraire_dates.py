@@ -7,6 +7,26 @@ MOIS = {
     'decembre':12,'décembre':12
 }
 
+def _annee_pertinente(mois, jour):
+    """Choisit l'annee a retenir pour un couple mois/jour sans annee explicite.
+
+    Un client qui parle d'avril alors qu'on est en aout vise la saison
+    suivante, pas celle qui vient de s'ecouler. On bascule donc sur l'annee
+    suivante des que la date obtenue serait deja passee.
+    """
+    aujourdhui = datetime.now()
+    annee = aujourdhui.year
+    try:
+        if datetime(annee, mois, jour) < aujourdhui.replace(
+                hour=0, minute=0, second=0, microsecond=0):
+            annee += 1
+    except ValueError:
+        # Jour invalide pour ce mois (31 fevrier) : on laisse l'annee courante,
+        # l'appelant rejettera la date.
+        pass
+    return annee
+
+
 def extraire_dates(texte):
     annee = datetime.now().year
     texte_lower = texte.lower()
@@ -18,8 +38,10 @@ def extraire_dates(texte):
     if m:
         j1, j2, mois_nom = int(m.group(1)), int(m.group(2)), m.group(3)
         mois = MOIS[mois_nom]
-        dates.append(f"{annee}-{mois:02d}-{j1:02d}")
-        dates.append(f"{annee}-{mois:02d}-{j2:02d}")
+        # Meme annee pour les deux bornes, choisie sur la date d'arrivee.
+        an = _annee_pertinente(mois, j1)
+        dates.append(f"{an}-{mois:02d}-{j1:02d}")
+        dates.append(f"{an}-{mois:02d}-{j2:02d}")
         return dates
 
     # Format JJ/MM ou JJ-MM
@@ -27,7 +49,8 @@ def extraire_dates(texte):
     matches = re.findall(pattern2, texte)
     for m in matches:
         try:
-            dates.append(f"{annee}-{int(m[1]):02d}-{int(m[0]):02d}")
+            jour, mois = int(m[0]), int(m[1])
+            dates.append(f"{_annee_pertinente(mois, jour)}-{mois:02d}-{jour:02d}")
         except:
             pass
     if dates:
@@ -41,6 +64,6 @@ def extraire_dates(texte):
     if m3:
         jour, mois = int(m3.group(1)), MOIS[m3.group(2)]
         if 1 <= jour <= 31:
-            dates.append(f"{annee}-{mois:02d}-{jour:02d}")
+            dates.append(f"{_annee_pertinente(mois, jour)}-{mois:02d}-{jour:02d}")
 
     return dates
