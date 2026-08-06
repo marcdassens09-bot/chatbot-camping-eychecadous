@@ -102,8 +102,8 @@ def draw_header(c, doc):
 
     # Logo complet (icône + texte blanc)
     if os.path.exists(LOGO_PATH):
-        logo_w = 52 * mm
-        logo_h = 12.5 * mm
+        logo_w = 110 * mm
+        logo_h = 26 * mm
         c.drawImage(
             LOGO_PATH,
             MARGIN_LEFT,
@@ -125,7 +125,7 @@ def draw_header(c, doc):
     contact_lines = [
         "Marc-Paul Dassens",
         "Artigat — 09130 Ariège",
-        "mpsolutionsia@gmail.com",
+        "contact@mpsolutionsia.fr",
     ]
     y_contact = H - 9*mm
     for line in contact_lines:
@@ -151,7 +151,7 @@ def draw_footer(c, doc):
 
     c.setFont("Helvetica", 7.5)
     c.setFillColor(colors.HexColor("#888888"))
-    c.drawString(MARGIN_LEFT, 13*mm, "MP Solutions IA — Micro-entreprise — mpsolutionsia@gmail.com")
+    c.drawString(MARGIN_LEFT, 13*mm, "MP Solutions IA — Micro-entreprise — contact@mpsolutionsia.fr")
 
     c.drawRightString(W - MARGIN_RIGHT, 13*mm, f"Page {doc.page}")
 
@@ -235,13 +235,13 @@ if __name__ == "__main__":
         ),
         Spacer(1, 8*mm),
         Paragraph(
-            "Document confidentiel — MP Solutions IA — mpsolutionsia@gmail.com",
+            "Document confidentiel — MP Solutions IA — contact@mpsolutionsia.fr",
             S["mention"]
         ),
     ]
 
     build_document(
-        output_path="/home/claude/test_template.pdf",
+        output_path="C:/Projets/mp-solutions-ia/docs_template/test_template.pdf",
         title="Dossier de présentation",
         subtitle="Prospect : Maxime Moucheron — Full Habitat EURL",
         content_story=contenu,
