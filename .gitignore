@@ -4,3 +4,6 @@ __pycache__/
 # Secrets - ne jamais versionner
 .env
 google_calendar_key.json
+
+# Logs contenant des messages de vrais visiteurs - jamais versionner
+*_log.txt
