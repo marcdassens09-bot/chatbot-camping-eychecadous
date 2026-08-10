@@ -155,10 +155,30 @@ def envoyer_whatsapp_anthony(message):
     except Exception as e:
         print(f"Erreur WhatsApp : {e}", flush=True)
 
+def purger_log_ancien(chemin, jours=30):
+    from datetime import datetime, timedelta
+    limite = datetime.now() - timedelta(days=jours)
+    try:
+        with open(chemin, "r", encoding="utf-8") as f:
+            lignes = f.readlines()
+    except FileNotFoundError:
+        return
+    conservees = []
+    for ligne in lignes:
+        try:
+            horodatage = datetime.strptime(ligne[:16], "%Y-%m-%d %H:%M")
+            if horodatage >= limite:
+                conservees.append(ligne)
+        except ValueError:
+            conservees.append(ligne)
+    with open(chemin, "w", encoding="utf-8") as f:
+        f.writelines(conservees)
+
 def enregistrer_escalade(message, niveau, raison):
     try:
         from datetime import datetime
         horodatage = datetime.now().strftime("%Y-%m-%d %H:%M")
+        purger_log_ancien("escalades_log.txt")
         with open("escalades_log.txt", "a", encoding="utf-8") as f:
             f.write(f"{horodatage} | NIVEAU:{niveau} | {raison} | MSG: {message[:100]}\n")
     except Exception as e:
