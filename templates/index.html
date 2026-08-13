@@ -493,6 +493,15 @@ function showTyping() {
   return d;
 }
 
+// Identifiant de conversation propre à ce visiteur : évite que deux visiteurs
+// différents partagent le même historique côté serveur (sessionStorage =
+// propre à l'onglet, disparaît à sa fermeture).
+function genererSessionId() {
+  return 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+}
+const sessionId = sessionStorage.getItem('mpia_session_id') || genererSessionId();
+sessionStorage.setItem('mpia_session_id', sessionId);
+
 // Message d'accueil
 const salut = estJour ? 'Bonjour' : 'Bonsoir';
 addMsg(salut + ' ! 👋 Heureux de vous accueillir parmi nous.\n\nComment puis-je vous aider ?', 'bot');
@@ -512,7 +521,7 @@ async function envoyer(texteForce) {
     const resp = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: texte })
+      body: JSON.stringify({ message: texte, session_id: sessionId })
     });
     const data = await resp.json();
     typing.remove();
