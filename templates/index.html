@@ -502,6 +502,15 @@ function genererSessionId() {
 const sessionId = sessionStorage.getItem('mpia_session_id') || genererSessionId();
 sessionStorage.setItem('mpia_session_id', sessionId);
 
+// Le widget de la page hôte demande de vider l'affichage à la fermeture.
+// Le contexte de conversation reste intact côté serveur (via sessionId) :
+// seul l'écran redevient blanc.
+window.addEventListener('message', (e) => {
+  if (e.data === 'mpia-clear-display') {
+    chatZone.innerHTML = '';
+  }
+});
+
 // Message d'accueil
 const salut = estJour ? 'Bonjour' : 'Bonsoir';
 addMsg(salut + ' ! 👋 Heureux de vous accueillir parmi nous.\n\nComment puis-je vous aider ?', 'bot');
