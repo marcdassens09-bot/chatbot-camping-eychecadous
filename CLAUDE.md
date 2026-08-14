@@ -43,6 +43,23 @@ envoyé pour l'autre. Correctif à faire : stockage par `session_id`, sur le mod
 `conversation_store` de `agent-loop/mpsolutionsia_app.py`.
 
 `POST /effacer` vide cet historique global — sans authentification.
+## Reporting (ajouté 14/08/2026)
+
+Système de reporting réutilisable MP Solutions IA : `reporting_logger.py` (log JSONL
+à chaque échange), `reporting_stats.py`, `reporting_dashboard.py` (Blueprint Flask,
+route `/reporting` protégée par mot de passe). Dashboard :
+`chatbot-camping-eychecadous.onrender.com/reporting` — auth basique, utilisateur vide,
+mot de passe = variable d'env `REPORTING_PASSWORD`.
+
+Le disque persistant Render (`reporting-data`, mount `/var/data`) est requis pour que
+les logs survivent aux redéploiements — le chemin dans l'appel `log_event()` doit
+correspondre à ce mount path.
+
+`detecter_escalade()` a été durci le 14/08/2026 : le prompt système excluait mal les
+questions standard (dispo, tarifs) qui étaient parfois classées comme urgentes à tort.
+Le prompt liste maintenant explicitement ce qui n'est jamais une escalade.
+
+Reste à faire : reproduire l'intégration reporting sur chatbot-fumeco-leze (pas commencé).
 
 ## Divers
 
