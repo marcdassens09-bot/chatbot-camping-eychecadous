@@ -486,7 +486,7 @@ def chat():
             msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
             envoyer_whatsapp_anthony(msg_anthony)
         log_event(
-            log_path="chat_events.jsonl",
+            log_path="/var/data/chat_events.jsonl",
             question=message_filtre,
             urgent=escalade.get("escalade", False),
             answered=bool(texte),
