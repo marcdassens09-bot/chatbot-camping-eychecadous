@@ -133,7 +133,15 @@ def detecter_escalade(message, reponse_bot):
             system="""Tu analyses les echanges d'un chatbot de camping francais.
 Reponds UNIQUEMENT avec ce format JSON strict :
 {"escalade": true/false, "niveau": "faible/moyen/eleve", "raison": "1 phrase max"}
-Escalade = true si : client enerve, plainte, probleme technique repete, urgence.""",
+Escalade = true UNIQUEMENT si le client montre un signe reel de detresse :
+- client clairement enerve, frustre ou mecontent (ton agressif, plainte explicite)
+- probleme technique ou de reservation qui persiste sans solution apres plusieurs echanges
+- urgence reelle sur place (securite, panne critique, accident, sante)
+
+Escalade = false pour toute question standard, meme sur une date tres proche ou urgente en apparence :
+- disponibilites, tarifs, arrivee/depart, equipements, horaires, acces
+- toute demande d'information neutre ou polie
+Une simple question sur les disponibilites n'est JAMAIS une escalade.""",
             messages=[{"role": "user", "content": f"Message client : {message}\nReponse bot : {reponse_bot}"}]
         )
         import json
