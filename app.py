@@ -7,7 +7,9 @@ from flask import Flask, request, jsonify, render_template
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from flask_limiter.util import get_remote_addressfrom flask_limiter.util import get_remote_address
+
+from reporting_logger import log_event
 # NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
 # verifie le 03/08/2026). verifier_dispo() renvoie True des que l'agenda est
 # vide, donc le bot annoncerait "disponible" pour toutes les dates sans exception.
@@ -481,6 +483,13 @@ def chat():
             raison = escalade.get("raison", "")
             msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
             envoyer_whatsapp_anthony(msg_anthony)
+        log_event(
+            log_path="chat_events.jsonl",
+            question=message_filtre,
+            urgent=escalade.get("escalade", False),
+            answered=bool(texte),
+            client_name="Camping Les Eychecadous",
+        )
         if texte:
             return jsonify({"reponse": texte, "escalade": escalade.get("escalade", False), "niveau_escalade": escalade.get("niveau", "faible")})
         else:
