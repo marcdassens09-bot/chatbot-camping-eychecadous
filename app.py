@@ -10,6 +10,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from reporting_logger import log_event
+from reporting_dashboard import reporting_bp
 # NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
 # verifie le 03/08/2026). verifier_dispo() renvoie True des que l'agenda est
 # vide, donc le bot annoncerait "disponible" pour toutes les dates sans exception.
@@ -18,6 +19,7 @@ from reporting_logger import log_event
 
 load_dotenv()
 app = Flask(__name__)
+app.register_blueprint(reporting_bp)
 limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
 client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
 conversation_store = {}
