@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, render_template
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_addressfrom flask_limiter.util import get_remote_address
+from flask_limiter.util import get_remote_address
 
 from reporting_logger import log_event
 # NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
