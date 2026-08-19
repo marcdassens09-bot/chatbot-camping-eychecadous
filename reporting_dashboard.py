@@ -17,7 +17,7 @@ Accès : https://<url-render-du-client>/reporting
 
 import os
 from functools import wraps
-from flask import Blueprint, render_template, request, Response
+from flask import Blueprint, render_template, request, Response, jsonify
 
 from reporting_stats import load_events, compute_stats
 
@@ -59,3 +59,13 @@ def reporting_dashboard():
         stats=stats,
         client_name=CLIENT_NAME,
     )
+
+
+@reporting_bp.route("/reporting/api")
+@requires_auth
+def reporting_api():
+    """Mêmes statistiques que /reporting, en JSON — pour un agent ou un
+    script externe (digest automatique, etc.) plutôt qu'un navigateur."""
+    events = load_events(LOG_PATH, days=30)
+    stats = compute_stats(events)
+    return jsonify({"client_name": CLIENT_NAME, **stats})
