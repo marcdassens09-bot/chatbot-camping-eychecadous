@@ -85,6 +85,27 @@
       flex-shrink: 0;
     }
 
+    /* Bouton mode ch'ti */
+    .chti-btn {
+      background: rgba(255,255,255,.12);
+      border: 1.5px solid rgba(255,255,255,.3);
+      color: #fff;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      cursor: pointer;
+      transition: all .2s ease;
+      flex-shrink: 0;
+    }
+    .chti-btn:hover { background: rgba(255,255,255,.22); }
+    .chti-btn.active {
+      background: #E8730A;
+      border-color: #E8730A;
+      box-shadow: 0 0 10px rgba(232,115,10,.6);
+    }
+
     /* ─── SCÈNE ANIMÉE ─── */
     .scene-wrap {
       position: relative;
@@ -267,6 +288,7 @@
       <h1>Camping Les Eychecadous</h1>
       <p>Assistant virtuel · Ariège</p>
     </div>
+    <button id="chti-btn" class="chti-btn" title="Parler ch'ti !" aria-label="Activer le mode ch'ti">😉 Ch'ti</button>
     <div class="dot"></div>
   </header>
 
@@ -460,6 +482,8 @@ const chatZone  = document.getElementById('chat-zone');
 const inputEl   = document.getElementById('user-input');
 const sendBtn   = document.getElementById('send-btn');
 const micBtn    = document.getElementById('mic-btn');
+const chtiBtn   = document.getElementById('chti-btn');
+let modeChti    = false;
 
 function addMsg(texte, role) {
   const div = document.createElement('div');
@@ -530,7 +554,7 @@ async function envoyer(texteForce) {
     const resp = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: texte, session_id: sessionId })
+      body: JSON.stringify({ message: texte, session_id: sessionId, chti: modeChti })
     });
     const data = await resp.json();
     typing.remove();
@@ -546,6 +570,12 @@ async function envoyer(texteForce) {
 
 sendBtn.addEventListener('click', () => envoyer());
 inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') envoyer(); });
+
+chtiBtn.addEventListener('click', () => {
+  modeChti = !modeChti;
+  chtiBtn.classList.toggle('active', modeChti);
+  addMsg(modeChti ? "Mode ch'ti activé 😉 Ej vais vous causer comme ichi !" : "Mode ch'ti désactivé. 🙂", 'bot');
+});
 
 // ─── MICRO (Web Speech API) ──────────────────────────────────────────────────
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
