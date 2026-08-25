@@ -36,7 +36,7 @@ def enregistrer_question(question):
     # Complètement désactivé pour éviter les erreurs Render
     return None
 
-from extraire_dates import extraire_dates, MOIS
+from extraire_dates import extraire_dates, extraire_participants, extraire_type_hebergement, MOIS
 from outils_tarifs import OUTILS, IMPLEMENTATIONS
 
 BASE_RESERVATION = "https://reservation.secureholiday.net/fr/5438/search/product-list"
@@ -56,10 +56,16 @@ MOTS_CLES_SEJOUR = [
 NUITS_PAR_DEFAUT = 7
 
 
-def lien_reservation(dates):
+def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement=None):
     """Construit un lien SecureHoliday a partir des dates trouvees dans le message.
 
     dates : liste de chaines 'YYYY-MM-DD' renvoyee par extraire_dates().
+    nb_adultes, ages_enfants : composition du sejour, renvoyee par
+        extraire_participants() ; ajoutee au lien (parametre 'travelers')
+        uniquement quand elle est connue avec certitude.
+    type_hebergement : 'pitch' ou 'accommodation', renvoye par
+        extraire_type_hebergement() ; ajoutee au lien (parametre
+        'productType') quand le message le precise.
 
     - deux dates ou plus -> recherche sur la periode exacte
     - une seule date     -> arrivee + NUITS_PAR_DEFAUT nuits
@@ -86,11 +92,17 @@ def lien_reservation(dates):
     else:
         depart = arrivee + timedelta(days=NUITS_PAR_DEFAUT)
 
-    parametres = urlencode({
+    parametres = {
         "dateStart": arrivee.strftime("%d/%m/%Y"),
         "dateEnd": depart.strftime("%d/%m/%Y"),
-    })
-    return f"{BASE_RESERVATION}?{parametres}"
+    }
+    if nb_adultes:
+        groupes = [f"{nb_adultes}@"] + [f"1@{age}" for age in (ages_enfants or [])]
+        parametres["travelers"] = ";".join(groupes)
+    if type_hebergement:
+        parametres["productType"] = type_hebergement
+
+    return f"{BASE_RESERVATION}?{urlencode(parametres)}"
 
 
 def mois_evoque(texte):
@@ -421,7 +433,9 @@ def chat():
         if any(mot in message.lower() for mot in mots_cles):
             try:
                 dates = extraire_dates(message)
-                lien = lien_reservation(dates)
+                nb_adultes, ages_enfants = extraire_participants(message)
+                type_hebergement = extraire_type_hebergement(message)
+                lien = lien_reservation(dates, nb_adultes, ages_enfants, type_hebergement)
                 if lien and len(dates) >= 2:
                     info_reservation = (
                         f"\n\n[RESERVATION] Dates detectees : du {dates[0]} au {dates[1]}. "

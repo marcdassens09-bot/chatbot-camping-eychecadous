@@ -67,3 +67,43 @@ def extraire_dates(texte):
             dates.append(f"{_annee_pertinente(mois, jour)}-{mois:02d}-{jour:02d}")
 
     return dates
+
+
+def extraire_participants(texte):
+    """Cherche le nombre d'adultes et l'age des enfants dans le message.
+
+    Renvoie (nb_adultes, ages_enfants) ou (None, None) si le message ne
+    donne pas de composition assez claire pour le parametre 'travelers' de
+    SecureHoliday (ex: des enfants sont mentionnes mais sans age). Mieux
+    vaut omettre le parametre que d'envoyer une composition fausse.
+    """
+    if not texte:
+        return None, None
+    bas = texte.lower()
+
+    m_adultes = re.search(r'(\d+)\s*adultes?', bas)
+    if not m_adultes:
+        return None, None
+    nb_adultes = int(m_adultes.group(1))
+
+    ages_enfants = []
+    for m in re.finditer(r'(\d+)?\s*enfants?\s+de\s+(\d+)\s*ans?', bas):
+        nb = int(m.group(1)) if m.group(1) else 1
+        ages_enfants.extend([int(m.group(2))] * nb)
+
+    if 'enfant' in bas and not ages_enfants:
+        return None, None
+
+    return nb_adultes, ages_enfants
+
+
+def extraire_type_hebergement(texte):
+    """Devine si le client vise un emplacement ou une location, d'apres les mots employes."""
+    if not texte:
+        return None
+    bas = texte.lower()
+    if any(m in bas for m in ["tente", "caravane", "camping-car", "camping car", "emplacement"]):
+        return "pitch"
+    if any(m in bas for m in ["mobil-home", "mobilhome", "mobil home", "bungalow", "chalet", "location"]):
+        return "accommodation"
+    return None
