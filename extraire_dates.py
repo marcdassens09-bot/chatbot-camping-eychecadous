@@ -107,3 +107,40 @@ def extraire_type_hebergement(texte):
     if any(m in bas for m in ["mobil-home", "mobilhome", "mobil home", "bungalow", "chalet", "location"]):
         return "accommodation"
     return None
+
+
+# Catalogue transmis par Ctoutvert le 24/08/2026 (ShProductId). Les noms les
+# plus specifiques sont places avant les plus generiques ("grand mobil home"
+# avant "mobil home") pour qu'un match ne soit jamais ecrase par un autre
+# plus large recherche ensuite.
+PRODUITS = [
+    ("grand mobil home", 124796),
+    ("mobil home confort", 124793),
+    ("mobil-home confort", 124793),
+    ("tente safari", 94919),
+    ("forfait randonneur", 81754),
+    ("emplacement camping car", 79832),
+    ("emplacement camping-car", 79832),
+    ("emplacement camping", 79827),
+    ("bengali", 79658),
+    ("cyrus", 79659),
+    ("mobil-home", 79661),
+    ("mobilhome", 79661),
+    ("mobil home", 79661),
+]
+
+
+def extraire_produit(texte):
+    """Cherche le nom d'un hebergement precis du catalogue dans le message.
+
+    Renvoie l'identifiant produit SecureHoliday (ShProductId) ou None si le
+    client ne cite aucun nom du catalogue. Mieux vaut ne rien renvoyer que de
+    pointer vers le mauvais hebergement.
+    """
+    if not texte:
+        return None
+    bas = texte.lower()
+    for nom, produit_id in PRODUITS:
+        if nom in bas:
+            return produit_id
+    return None

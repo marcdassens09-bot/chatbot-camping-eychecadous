@@ -36,10 +36,11 @@ def enregistrer_question(question):
     # Complètement désactivé pour éviter les erreurs Render
     return None
 
-from extraire_dates import extraire_dates, extraire_participants, extraire_type_hebergement, MOIS
+from extraire_dates import extraire_dates, extraire_participants, extraire_type_hebergement, extraire_produit, MOIS
 from outils_tarifs import OUTILS, IMPLEMENTATIONS
 
 BASE_RESERVATION = "https://reservation.secureholiday.net/fr/5438/search/product-list"
+BASE_PRODUIT = "https://reservation.secureholiday.net/fr/5438/product"
 CALENDRIER_SAISON = "https://reservation.secureholiday.net/fr/5438/availabilities"
 
 # Mots qui signalent une demande de sejour. Les noms de mois viennent de MOIS
@@ -56,7 +57,7 @@ MOTS_CLES_SEJOUR = [
 NUITS_PAR_DEFAUT = 7
 
 
-def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement=None):
+def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement=None, produit_id=None):
     """Construit un lien SecureHoliday a partir des dates trouvees dans le message.
 
     dates : liste de chaines 'YYYY-MM-DD' renvoyee par extraire_dates().
@@ -66,6 +67,11 @@ def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement
     type_hebergement : 'pitch' ou 'accommodation', renvoye par
         extraire_type_hebergement() ; ajoutee au lien (parametre
         'productType') quand le message le precise.
+    produit_id : identifiant ShProductId renvoye par extraire_produit()
+        quand le client cite un hebergement precis du catalogue (ex: "un
+        Bengali"). Pointe alors directement sur sa fiche plutot que sur la
+        recherche generale ; type_hebergement devient redondant dans ce cas
+        et n'est pas envoye.
 
     - deux dates ou plus -> recherche sur la periode exacte
     - une seule date     -> arrivee + NUITS_PAR_DEFAUT nuits
@@ -99,10 +105,15 @@ def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement
     if nb_adultes:
         groupes = [f"{nb_adultes}@"] + [f"1@{age}" for age in (ages_enfants or [])]
         parametres["travelers"] = ";".join(groupes)
-    if type_hebergement:
-        parametres["productType"] = type_hebergement
 
-    return f"{BASE_RESERVATION}?{urlencode(parametres)}"
+    if produit_id:
+        base = f"{BASE_PRODUIT}/{produit_id}"
+    else:
+        base = BASE_RESERVATION
+        if type_hebergement:
+            parametres["productType"] = type_hebergement
+
+    return f"{base}?{urlencode(parametres)}"
 
 
 def mois_evoque(texte):
@@ -435,7 +446,8 @@ def chat():
                 dates = extraire_dates(message)
                 nb_adultes, ages_enfants = extraire_participants(message)
                 type_hebergement = extraire_type_hebergement(message)
-                lien = lien_reservation(dates, nb_adultes, ages_enfants, type_hebergement)
+                produit_id = extraire_produit(message)
+                lien = lien_reservation(dates, nb_adultes, ages_enfants, type_hebergement, produit_id)
                 if lien and len(dates) >= 2:
                     info_reservation = (
                         f"\n\n[RESERVATION] Dates detectees : du {dates[0]} au {dates[1]}. "
