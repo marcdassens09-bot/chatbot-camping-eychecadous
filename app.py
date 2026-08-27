@@ -67,11 +67,11 @@ def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement
     type_hebergement : 'pitch' ou 'accommodation', renvoye par
         extraire_type_hebergement() ; ajoutee au lien (parametre
         'productType') quand le message le precise.
-    produit_id : identifiant ShProductId renvoye par extraire_produit()
-        quand le client cite un hebergement precis du catalogue (ex: "un
-        Bengali"). Pointe alors directement sur sa fiche plutot que sur la
-        recherche generale ; type_hebergement devient redondant dans ce cas
-        et n'est pas envoye.
+    produit_id : identifiant ShProductId renvoye par extraire_produit() quand
+        le client cite un hebergement precis du catalogue (ex: "un Bengali").
+        Accepte mais PAS ENCORE UTILISE dans le lien : le format annonce par
+        Ctoutvert (/product/<id>) renvoie 404 en pratique, teste le
+        27/08/2026. A cabler une fois le bon format confirme.
 
     - deux dates ou plus -> recherche sur la periode exacte
     - une seule date     -> arrivee + NUITS_PAR_DEFAUT nuits
@@ -106,12 +106,13 @@ def lien_reservation(dates, nb_adultes=None, ages_enfants=None, type_hebergement
         groupes = [f"{nb_adultes}@"] + [f"1@{age}" for age in (ages_enfants or [])]
         parametres["travelers"] = ";".join(groupes)
 
-    if produit_id:
-        base = f"{BASE_PRODUIT}/{produit_id}"
-    else:
-        base = BASE_RESERVATION
-        if type_hebergement:
-            parametres["productType"] = type_hebergement
+    # produit_id n'est pas encore utilise : le format "/product/<id>" tel que
+    # decrit par Rachel (Ctoutvert) renvoie 404 en pratique (teste le
+    # 27/08/2026). Tant que le bon format n'est pas confirme, on retombe sur
+    # la recherche generale plutot que d'envoyer un lien casse a un client.
+    base = BASE_RESERVATION
+    if type_hebergement:
+        parametres["productType"] = type_hebergement
 
     return f"{base}?{urlencode(parametres)}"
 
