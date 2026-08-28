@@ -24,6 +24,21 @@ limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
 client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
 conversation_store = {}
 
+
+@app.after_request
+def _entetes_securite(response):
+    """En-tetes de securite HTTP sur toutes les reponses.
+    frame-ancestors : seul le site du camping peut embarquer le chatbot en
+    iframe (widget.js), les autres origines sont bloquees (anti-clickjacking).
+    Pas de Permissions-Policy : le micro reste autorise pour la saisie vocale."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000"
+    response.headers["Content-Security-Policy"] = (
+        "frame-ancestors 'self' https://campingartigat.com https://www.campingartigat.com"
+    )
+    return response
+
 def filtrer_donnees_sensibles(texte):
     if not texte or not isinstance(texte, str):
         return str(texte) if texte else ""
