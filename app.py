@@ -1,5 +1,6 @@
 # # from twilio.rest import Client as TwilioClient
 import os
+import json
 import re
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
@@ -237,11 +238,22 @@ def enregistrer_escalade(message, niveau, raison):
 
 def generer_rapport_hebdo():
     try:
-        with open("questions_log.txt", "r", encoding="utf-8") as f:
+               with open("/var/data/chat_events.jsonl", "r", encoding="utf-8") as f:
             lignes = f.readlines()
         if not lignes:
             return "Aucune question enregistree cette semaine."
-        questions = " | ".join([l.split(" | ")[-1].strip() for l in lignes[-50:]])
+        questions_list = []
+        for l in lignes[-50:]:
+            try:
+                event = json.loads(l)
+                q = event.get("question", "").strip()
+                if q:
+                    questions_list.append(q)
+            except (json.JSONDecodeError, AttributeError):
+                continue
+        if not questions_list:
+            return "Aucune question enregistree cette semaine."
+        questions = " | ".join(questions_list)
         resultat = client.messages.create(
             model="claude-sonnet-5",
             max_tokens=500,
@@ -250,6 +262,8 @@ def generer_rapport_hebdo():
             messages=[{"role": "user", "content": f"Questions : {questions}"}]
         )
         return resultat.content[0].text.strip()
+    except FileNotFoundError:
+        return "Aucune question enregistree pour le moment (aucun visiteur n'a encore utilise le chatbot)."
     except Exception as e:
         return f"Erreur : {e}"
 
