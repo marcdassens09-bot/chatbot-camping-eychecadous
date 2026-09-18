@@ -488,9 +488,60 @@ let modeChti    = false;
 function addMsg(texte, role) {
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-  div.innerHTML = texte.replace(/\n/g, '<br>');
+  const lignes = String(texte).split('\n');
+  lignes.forEach((ligne, i) => {
+    if (i > 0) div.appendChild(document.createElement('br'));
+    div.appendChild(document.createTextNode(ligne));
+  });
   chatZone.appendChild(div);
   chatZone.scrollTop = chatZone.scrollHeight;
+  return div;
+}
+
+// Affichage "machine à écrire" : uniquement un effet visuel côté navigateur.
+// Le serveur a déjà calculé la réponse en entier avant l'appel — ça ne
+// réduit pas le délai avant le premier mot, ça rend juste l'arrivée du
+// texte moins brutale, comme une réponse tapée en direct.
+// Toujours du texte pur (createTextNode) : jamais d'innerHTML sur du
+// contenu qui vient du bot ou du visiteur.
+function addMsgAnime(texte, role) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  chatZone.appendChild(div);
+  chatZone.scrollTop = chatZone.scrollHeight;
+
+  const lignes = String(texte).split('\n');
+  let ligneIdx = 0, charIdx = 0;
+  let noeudCourant = document.createTextNode('');
+  div.appendChild(noeudCourant);
+
+  // Révèle plusieurs caractères par tick plutôt qu'un seul : une réponse de
+  // 700 caractères s'affiche en ~1,5s au lieu de plus de 10s. Ajuste
+  // CARACTERES_PAR_TICK si tu veux plus lent/rapide (ex: 3 pour ralentir).
+  const CARACTERES_PAR_TICK = 8;
+  const MS_PAR_TICK = 16;
+
+  function etape() {
+    if (ligneIdx >= lignes.length) return;
+    const ligne = lignes[ligneIdx];
+    if (charIdx < ligne.length) {
+      const fin = Math.min(charIdx + CARACTERES_PAR_TICK, ligne.length);
+      noeudCourant.textContent += ligne.slice(charIdx, fin);
+      charIdx = fin;
+      chatZone.scrollTop = chatZone.scrollHeight;
+      setTimeout(etape, MS_PAR_TICK);
+      return;
+    }
+    ligneIdx++;
+    charIdx = 0;
+    if (ligneIdx < lignes.length) {
+      div.appendChild(document.createElement('br'));
+      noeudCourant = document.createTextNode('');
+      div.appendChild(noeudCourant);
+    }
+    setTimeout(etape, MS_PAR_TICK);
+  }
+  etape();
   return div;
 }
 
@@ -537,12 +588,13 @@ window.addEventListener('message', (e) => {
 
 // Message d'accueil
 const salut = estJour ? 'Bonjour' : 'Bonsoir';
-addMsg(salut + ' ! 👋 Heureux de vous accueillir parmi nous.\n\nComment puis-je vous aider ?', 'bot');
+addMsgAnime(salut + ' ! 👋 Heureux de vous accueillir parmi nous.\n\nComment puis-je vous aider ?', 'bot');
 showQuickBtns();
 
 // ─── ENVOI ──────────────────────────────────────────────────────────────────
 async function envoyer(texteForce) {
   const texte = (texteForce || inputEl.value).trim();
+  console.log('[envoyer] appelé avec texte =', JSON.stringify(texte), '| pile :', new Error().stack);
   if (!texte) return;
   inputEl.value = '';
   sendBtn.disabled = true;
@@ -558,10 +610,10 @@ async function envoyer(texteForce) {
     });
     const data = await resp.json();
     typing.remove();
-    addMsg(data.reponse || "Désolé, je n'ai pas pu répondre.", 'bot');
+    addMsgAnime(data.reponse || "Désolé, je n'ai pas pu répondre.", 'bot');
   } catch {
     typing.remove();
-    addMsg("Une erreur est survenue. Réessayez dans un instant.", 'bot');
+    addMsgAnime("Une erreur est survenue. Réessayez dans un instant.", 'bot');
   } finally {
     sendBtn.disabled = false;
     inputEl.focus();
@@ -574,29 +626,125 @@ inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') envoyer(); });
 chtiBtn.addEventListener('click', () => {
   modeChti = !modeChti;
   chtiBtn.classList.toggle('active', modeChti);
-  addMsg(modeChti ? "Mode ch'ti activé 😉 Ej vais vous causer comme ichi !" : "Mode ch'ti désactivé. 🙂", 'bot');
+  addMsgAnime(modeChti ? "Mode ch'ti activé 😉 Ej vais vous causer comme ichi !" : "Mode ch'ti désactivé. 🙂", 'bot');
 });
 
 // ─── MICRO (Web Speech API) ──────────────────────────────────────────────────
+// Nécessite un contexte sécurisé (HTTPS ou localhost). Sur Render en HTTPS
+// ou en dev via `flask run` (http://127.0.0.1 / localhost), c'est OK.
+// Ouvert en file:// ou en http:// sur une IP/domaine tiers, le navigateur
+// refuse silencieusement — d'où l'avertissement console explicite ci-dessous.
+if (!window.isSecureContext) {
+  console.warn('[mic] Contexte non sécurisé (ni HTTPS ni localhost) : la reconnaissance vocale sera bloquée par le navigateur.');
+}
+
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const rec = new SR();
-  rec.lang = 'fr-FR';
-  rec.continuous = false;
-  rec.interimResults = false;
+  let rec = null;
   let recActive = false;
+  // true seulement quand c'est TOI qui as cliqué pour arrêter. Si Chrome
+  // referme tout seul (silence de quelques secondes entre deux mots, limite
+  // du navigateur), on redémarre en douce sans envoyer et sans rien perdre.
+  let arretDemande = false;
+  let transcriptFinal = '';
+
+  // Un nouvel objet SpeechRecognition à chaque question posée au micro :
+  // Chrome garde parfois en mémoire les résultats déjà reconnus sur un objet
+  // réutilisé, ce qui peut faire "revenir" une ancienne question reconnue
+  // quand on relance une écoute. Repartir de zéro à chaque fois évite ça.
+  let compteurInstance = 0;
+
+  function creerReconnaissance() {
+    const id = ++compteurInstance;
+    const r = new SR();
+    r.lang = 'fr-FR';
+    // continuous+interimResults : une phrase naturelle contient des pauses
+    // entre les mots. En continuous=false, Chrome coupe la reconnaissance à
+    // la première pause et déclenche plusieurs "onresult" (un mot à la fois),
+    // envoyant chaque bout comme message séparé. En continuous=true, on laisse
+    // l'utilisateur parler toute sa phrase et on n'envoie qu'une fois, à la fin.
+    r.continuous = true;
+    r.interimResults = true;
+
+    console.log(`[mic#${id}] créé`);
+
+    r.onstart = () => {
+      recActive = true;
+      micBtn.classList.add('active');
+      console.log(`[mic#${id}] onstart | arretDemande=${arretDemande} transcriptFinal=${JSON.stringify(transcriptFinal)}`);
+      // Retour visuel immédiat : Google met parfois 1-2s à renvoyer le
+      // premier mot reconnu. Sans ça, ce silence ressemble à un blocage.
+      if (!transcriptFinal) inputEl.placeholder = '🎙️ Je vous écoute…';
+    };
+    r.onend = () => {
+      console.log(`[mic#${id}] onend | arretDemande=${arretDemande} transcriptFinal=${JSON.stringify(transcriptFinal)} recActuel===cetInstance=${rec === r}`);
+      if (!arretDemande) {
+        // Coupure automatique de Chrome, pas une vraie fin : on relance
+        // (même question en cours, on continue juste de l'écouter).
+        demarrerEcoute();
+        return;
+      }
+      recActive = false;
+      micBtn.classList.remove('active');
+      inputEl.placeholder = 'Posez votre question…';
+      const texte = transcriptFinal.trim();
+      transcriptFinal = ''; // toujours vidé après usage, envoyé ou pas
+      console.log(`[mic#${id}] onend -> envoi : ${JSON.stringify(texte)}`);
+      if (texte) {
+        inputEl.value = texte;
+        envoyer();
+      }
+    };
+    r.onerror = e => {
+      console.error(`[mic#${id}] Erreur SpeechRecognition :`, e.error, '| arretDemande=', arretDemande);
+      if (e.error === 'no-speech' || e.error === 'aborted') {
+        // Pas une vraie erreur : onend va suivre et gérer le redémarrage.
+        return;
+      }
+      arretDemande = true;
+      recActive = false;
+      micBtn.classList.remove('active');
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        addMsgAnime("Micro refusé : autorise l'accès au micro dans les réglages de ton navigateur pour ce site.", 'bot');
+      }
+    };
+    r.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const morceau = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          transcriptFinal += morceau + ' ';
+        } else {
+          interim += morceau;
+        }
+      }
+      console.log(`[mic#${id}] onresult | resultIndex=${e.resultIndex} results.length=${e.results.length} transcriptFinal=${JSON.stringify(transcriptFinal)} interim=${JSON.stringify(interim)}`);
+      // Affiche en direct ce qui est reconnu, sans encore envoyer.
+      inputEl.value = (transcriptFinal + interim).trim();
+    };
+    return r;
+  }
+
+  function demarrerEcoute() {
+    try {
+      rec.start();
+    } catch (err) {
+      // Redémarrage trop rapide après un stop : Chrome râle (InvalidState),
+      // on retente une fois un instant plus tard.
+      setTimeout(() => { try { rec.start(); } catch (e2) { console.error('[mic] rec.start() a échoué :', e2); } }, 250);
+    }
+  }
 
   micBtn.addEventListener('click', () => {
-    if (recActive) { rec.stop(); return; }
-    rec.start();
+    console.log(`[mic] clic sur le bouton | recActive=${recActive}`);
+    if (recActive) { arretDemande = true; rec.stop(); return; }
+    arretDemande = false;
+    transcriptFinal = '';
+    rec = creerReconnaissance();
+    demarrerEcoute();
   });
-  rec.onstart = () => { recActive = true;  micBtn.classList.add('active'); };
-  rec.onend   = () => { recActive = false; micBtn.classList.remove('active'); };
-  rec.onresult = e => {
-    inputEl.value = e.results[0][0].transcript;
-    envoyer();
-  };
 } else {
+  console.warn('[mic] SpeechRecognition non supporté par ce navigateur.');
   micBtn.style.display = 'none';
 }
 </script>

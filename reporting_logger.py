@@ -17,6 +17,7 @@ Utilisation dans app_XXX.py :
 """
 
 import json
+import os
 from datetime import datetime, timezone
 
 
@@ -48,5 +49,15 @@ def log_event(log_path, question, profile="inconnu", urgent=False,
     if client_name:
         event["client"] = client_name
 
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    # La journalisation est un à-côté : si elle échoue (dossier /var/data
+    # absent en local, disque plein, permissions...), le chat doit quand
+    # même répondre au visiteur. On ne fait jamais planter la conversation
+    # pour un problème de log.
+    try:
+        dossier = os.path.dirname(log_path)
+        if dossier:
+            os.makedirs(dossier, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except OSError as e:
+        print(f"[reporting_logger] Écriture du log impossible ({log_path}) : {e}")
