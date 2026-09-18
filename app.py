@@ -238,9 +238,9 @@ def enregistrer_escalade(message, niveau, raison):
 
 def generer_rapport_hebdo():
     try:
-               with open("/var/data/chat_events.jsonl", "r", encoding="utf-8") as f:
+        with open("/var/data/chat_events.jsonl", "r", encoding="utf-8") as f:
             lignes = f.readlines()
-        if not lignes:
+        if not lignes: 		
             return "Aucune question enregistree cette semaine."
         questions_list = []
         for l in lignes[-50:]:
