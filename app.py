@@ -585,5 +585,7 @@ def effacer():
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
+    # Serveur de dev Werkzeug, pour les tests en local uniquement.
+    # En production (Render), c'est gunicorn qui sert l'app (voir Procfile).
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, threaded=True)
