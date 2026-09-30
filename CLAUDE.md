@@ -78,7 +78,6 @@ correspondre à ce mount path.
 questions standard (dispo, tarifs) qui étaient parfois classées comme urgentes à tort.
 Le prompt liste maintenant explicitement ce qui n'est jamais une escalade.
 
-Reste à faire : reproduire l'intégration reporting sur chatbot-fumeco-leze (pas commencé).
 
 ### Purger une conversation de test de `chat_events.jsonl`
 
