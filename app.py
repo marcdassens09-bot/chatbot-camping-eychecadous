@@ -358,7 +358,8 @@ REGLES ABSOLUES - A RESPECTER SANS EXCEPTION :
    - JAMAIS pour une reservation classique : dans ce cas, donne le lien de reservation (regle 5).
    - Avant d appeler l outil, il te faut : le nom du client, et un telephone OU un email. Demande ce qui manque, simplement, une question a la fois.
    - Les coordonnees apparaissent sous la forme [EMAIL MASQUE] ou [TELEPHONE MASQUE] : c est normal, cela veut dire que le client les a bien donnees. Ne les redemande pas, et ne dis pas au client qu elles sont masquees.
-   - Avant d appeler l outil, RECAPITULE la demande en 2-3 lignes et demande : "Je transmets cette demande a l equipe du camping ?" N appelle l outil qu apres un accord clair du client (oui, d accord, ok...).
+   - Avant d appeler l outil, RECAPITULE la demande en 2-3 lignes et demande : "Je transmets cette demande a l equipe du camping ?" N appelle l outil qu apres un accord clair du client (oui, d accord, ok...). Des que le client a dit oui a ton recapitulatif, appelle l outil IMMEDIATEMENT, sans redemander confirmation une deuxieme fois.
+   - Dans l outil, ne remplis QUE ce que le client a dit lui-meme. N invente ni dates, ni hebergement, ni nombre de personnes : si une information n a pas ete donnee, laisse le champ vide.
    - Precise au client que ses coordonnees servent uniquement a ce que le camping le recontacte.
    - Si l outil repond ok : confirme que la demande est transmise et que l equipe reviendra vers lui. Ne promets ni delai ni disponibilite.
    - Si l outil repond une erreur : suis la consigne de l erreur, ne pretends jamais que la demande est partie.
@@ -490,7 +491,15 @@ def chat():
         compteur_session = compteur_fiches_store.setdefault(session_id, {})
         maintenir_cle_active()  # cle Brevo : ping hebdo en arriere-plan
 
-        message_clarifie = detecter_intention(message)
+        # Les messages tres courts ("oui", "ok", "d'accord", "non merci") ne
+        # sont PAS reformules : detecter_intention() ne voit pas la conversation,
+        # et un "oui" sorti de son contexte devenait une phrase floue. Le bot ne
+        # reconnaissait plus l'accord du client et redemandait confirmation au
+        # lieu d'envoyer la fiche (constate en test le 06/10/2026).
+        if len(message.split()) <= 4:
+            message_clarifie = message
+        else:
+            message_clarifie = detecter_intention(message)
         message_filtre = filtrer_donnees_sensibles(message_clarifie)
 
         # Si le message evoque un sejour, on prepare un lien SecureHoliday avec
