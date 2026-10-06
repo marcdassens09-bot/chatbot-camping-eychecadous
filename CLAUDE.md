@@ -100,6 +100,23 @@ l'instance ne redémarre pas (mais n'apparaît nulle part de visible : ni dashbo
 `enregistrer_question()` est un no-op (`return None`) et aucune escalade n'a encore été
 déclenchée. Rien à purger de ce côté sauf si l'un des deux se met à exister un jour.
 
+## Fiche de demande (ajoutée 06/10/2026)
+
+Outil `transmettre_demande` (`envoi_fiche.py`) : pour un groupe, une demande spéciale,
+un rappel ou une question sans réponse, le bot récapitule, demande l'accord du client,
+puis envoie une fiche par email via l'**API Brevo** (pas le SMTP : port 587 incertain
+sur Render gratuit). Jamais pour une réservation classique (lien SecureHoliday).
+
+- Coordonnées : extraites du message **brut** côté serveur (`contacts_store`), jamais
+  envoyées à Claude (`filtrer_donnees_sensibles` utilise les mêmes motifs).
+- Variables Render : `BREVO_API_KEY` (clé « chatbot-camping »), `FICHE_DESTINATAIRE`
+  (défaut `contact@mpsolutionsia.fr` = phase de test ; mettre `campingartigat@gmail.com`
+  une fois validé avec Anthony), `FICHE_EXPEDITEUR` (défaut `contact@mpsolutionsia.fr`,
+  domaine authentifié dans Brevo le 06/10/2026).
+- Max 3 fiches par session. Si Brevo échoue, le bot renvoie vers le téléphone.
+- Brevo coupe une clé après 90 jours sans usage : `maintenir_cle_active()` fait un
+  GET /account au plus 1 fois par semaine. Non vérifié que ça compte comme activité.
+
 ## Divers
 
 - `print()` sans `flush` : les erreurs n'apparaissent pas dans les logs Render (stdout tamponné).

@@ -12,6 +12,10 @@ from flask_limiter.util import get_remote_address
 
 from reporting_logger import log_event
 from reporting_dashboard import reporting_bp
+from envoi_fiche import (
+    MOTIF_EMAIL, MOTIF_TELEPHONE, OUTIL_TRANSMETTRE,
+    extraire_coordonnees, transmettre_demande, maintenir_cle_active,
+)
 # NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
 # verifie le 03/08/2026). verifier_dispo() renvoie True des que l'agenda est
 # vide, donc le bot annoncerait "disponible" pour toutes les dates sans exception.
@@ -24,6 +28,10 @@ app.register_blueprint(reporting_bp)
 limiter = Limiter(get_remote_address, app=app, default_limits=["20 per minute"])
 client = Anthropic(api_key=(os.environ.get("ANTHROPIC_API_KEY") or "").strip())
 conversation_store = {}
+# Fiche de demande : coordonnees du client et nombre de fiches envoyees, par
+# session. En memoire comme conversation_store (perdu au redemarrage).
+contacts_store = {}
+compteur_fiches_store = {}
 
 
 @app.after_request
@@ -43,8 +51,11 @@ def _entetes_securite(response):
 def filtrer_donnees_sensibles(texte):
     if not texte or not isinstance(texte, str):
         return str(texte) if texte else ""
-    texte = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[EMAIL MASQUE]', texte)
-    texte = re.sub(r'\b0[1-9](\s?\d{2}){4}\b', '[TELEPHONE MASQUE]', texte)
+    # Motifs partages avec envoi_fiche.py : ce qui est masque pour Claude est
+    # exactement ce qui est recupere cote serveur pour la fiche de demande.
+    # (couvre aussi 06.12.34.56.78, 06-12-..., +33 6 ..., absents avant)
+    texte = re.sub(MOTIF_EMAIL, '[EMAIL MASQUE]', texte)
+    texte = re.sub(MOTIF_TELEPHONE, '[TELEPHONE MASQUE]', texte)
     texte = re.sub(r'\b(?:\d[ -]?){13,16}\b', '[CARTE MASQUEE]', texte)
     return texte
 
@@ -342,6 +353,15 @@ REGLES ABSOLUES - A RESPECTER SANS EXCEPTION :
    - IMPORTANT : Si le client demande une annulation pour une date TRES proche (moins de 3 semaines en haute saison ou moins de 48h en basse saison), explique clairement que l annulation n est PLUS POSSIBLE car le delai a ete depasse. Sois sympathique mais ferme.
 4. DISPONIBILITES : tu n as JAMAIS acces aux disponibilites. Ne dis jamais qu une date est libre ou complete, meme si le client insiste.
 4bis. CALCULS DE PRIX : pour tout calcul de prix d un sejour en EMPLACEMENT (tente, caravane, camping-car), utilise l outil calculer_tarif_emplacement — ne calcule jamais un total de tete. Si le client donne des dates, utilise d abord calculer_nombre_nuits. Pour les locations (mobil-homes, bungalows), les prix sont "a partir de" : donne le tarif indicatif de la grille et renvoie vers la page de reservation pour le prix exact.
+4ter. TRANSMETTRE UNE DEMANDE A L EQUIPE (outil transmettre_demande) :
+   - A utiliser SEULEMENT pour ce que la reservation en ligne ne gere pas : sejour de groupe, demande speciale (arrivee tardive, besoin PMR, animal particulier...), client qui veut etre rappele, question a laquelle tu ne sais pas repondre.
+   - JAMAIS pour une reservation classique : dans ce cas, donne le lien de reservation (regle 5).
+   - Avant d appeler l outil, il te faut : le nom du client, et un telephone OU un email. Demande ce qui manque, simplement, une question a la fois.
+   - Les coordonnees apparaissent sous la forme [EMAIL MASQUE] ou [TELEPHONE MASQUE] : c est normal, cela veut dire que le client les a bien donnees. Ne les redemande pas, et ne dis pas au client qu elles sont masquees.
+   - Avant d appeler l outil, RECAPITULE la demande en 2-3 lignes et demande : "Je transmets cette demande a l equipe du camping ?" N appelle l outil qu apres un accord clair du client (oui, d accord, ok...).
+   - Precise au client que ses coordonnees servent uniquement a ce que le camping le recontacte.
+   - Si l outil repond ok : confirme que la demande est transmise et que l equipe reviendra vers lui. Ne promets ni delai ni disponibilite.
+   - Si l outil repond une erreur : suis la consigne de l erreur, ne pretends jamais que la demande est partie.
 5. LIEN DE RESERVATION : si le message contient [RESERVATION], termine ta reponse en donnant le lien fourni, tel quel, sans le modifier. Ne promets rien sur la disponibilite : la page l affichera au client.
    - Si le bloc mentionne deux dates : "Vous pouvez consulter les disponibilites et les tarifs pour ces dates ici : <lien>"
    - Si le bloc signale une seule date : donne le lien en precisant que la recherche porte sur une semaine par defaut et que le client peut ajuster la duree directement sur la page.
@@ -463,6 +483,13 @@ def chat():
         if len(message) > 500:
             return jsonify({"reponse": "Message trop long, merci de reformuler plus brievement."}), 400
 
+        # Fiche de demande : on garde les coordonnees du message BRUT cote
+        # serveur, avant que filtrer_donnees_sensibles() ne les masque.
+        contacts_session = contacts_store.setdefault(session_id, {})
+        contacts_session.update(extraire_coordonnees(message))
+        compteur_session = compteur_fiches_store.setdefault(session_id, {})
+        maintenir_cle_active()  # cle Brevo : ping hebdo en arriere-plan
+
         message_clarifie = detecter_intention(message)
         message_filtre = filtrer_donnees_sensibles(message_clarifie)
 
@@ -522,7 +549,7 @@ def chat():
                 model="claude-sonnet-5",
                 max_tokens=700,
                 thinking={"type": "disabled"},
-                tools=OUTILS,
+                tools=OUTILS + [OUTIL_TRANSMETTRE],
                 system=system_prompt,
                 messages=messages_api,
             )
@@ -537,12 +564,21 @@ def chat():
                 if bloc.type != "tool_use":
                     continue
                 try:
-                    contenu = IMPLEMENTATIONS[bloc.name](**bloc.input)
+                    if bloc.name == "transmettre_demande":
+                        # Besoin des coordonnees de la session : appel a part.
+                        contenu = transmettre_demande(
+                            contacts_session, compteur_session, **bloc.input)
+                    else:
+                        contenu = IMPLEMENTATIONS[bloc.name](**bloc.input)
                     erreur = False
                 except Exception as e:
                     contenu = f"Erreur : {e}"
                     erreur = True
-                print(f"[outil] {bloc.name}({bloc.input}) -> {contenu}", flush=True)
+                if bloc.name == "transmettre_demande":
+                    # Pas de nom ni de detail client dans les logs Render.
+                    print(f"[outil] transmettre_demande(motif={bloc.input.get('motif')}) -> {contenu}", flush=True)
+                else:
+                    print(f"[outil] {bloc.name}({bloc.input}) -> {contenu}", flush=True)
                 resultats.append({
                     "type": "tool_result",
                     "tool_use_id": bloc.id,
@@ -582,6 +618,8 @@ def chat():
 def effacer():
     session_id = request.json.get("session_id", "default") if request.json else "default"
     conversation_store.pop(session_id, None)
+    contacts_store.pop(session_id, None)
+    compteur_fiches_store.pop(session_id, None)
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
