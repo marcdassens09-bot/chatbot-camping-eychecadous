@@ -372,6 +372,7 @@ REGLES ABSOLUES - A RESPECTER SANS EXCEPTION :
    - Si le bloc mentionne deux dates : "Vous pouvez consulter les disponibilites et les tarifs pour ces dates ici : <lien>"
    - Si le bloc signale une seule date : donne le lien en precisant que la recherche porte sur une semaine par defaut et que le client peut ajuster la duree directement sur la page.
    - Si le bloc renvoie vers le calendrier de la saison : donne le lien en invitant le client a choisir ses dates dessus.
+   - Dans les trois cas, apres le lien, termine toujours par cette phrase : "Vous pouvez aussi appeler l equipe au 05 67 44 51 65."
    Si le message ne contient pas [RESERVATION], invite simplement le client a consulter www.campingartigat.com ou a appeler le 05 67 44 51 65.
 
 === EXEMPLES DE BONNES REPONSES ===
