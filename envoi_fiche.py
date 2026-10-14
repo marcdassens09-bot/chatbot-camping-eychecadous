@@ -160,6 +160,64 @@ def envoyer_fiche(sujet, corps_html, corps_texte, email_client=None):
     return False
 
 
+# ── Alerte escalade (remplace WhatsApp/Twilio, oct. 2026) ────────────────────
+
+def envoyer_alerte(niveau, raison, message_client):
+    """Previent le camping par email quand le chatbot detecte une urgence.
+
+    Envoi en arriere-plan : le client du chatbot n'attend pas Brevo.
+    Le message client est deja filtre (coordonnees masquees).
+    Variables d'environnement :
+        ALERTE_DESTINATAIRE  (defaut : campingartigat@gmail.com, demande d'Anthony le 14/10/2026)
+        ALERTE_COPIE         copie visible (defaut : contact@mpsolutionsia.fr) ;
+                             mettre "aucune" pour ne plus recevoir la copie
+    """
+    destinataire = os.environ.get("ALERTE_DESTINATAIRE", "campingartigat@gmail.com")
+    copie = os.environ.get("ALERTE_COPIE", "contact@mpsolutionsia.fr").strip()
+    expediteur = os.environ.get("FICHE_EXPEDITEUR", "contact@mpsolutionsia.fr")
+    niveau_txt = html.escape(str(niveau or "?"))
+    raison_txt = html.escape(str(raison or "non précisée"))
+    message_txt = html.escape(str(message_client or "")[:300])
+    sujet = f"\U0001F6A8 Alerte chatbot camping - niveau {niveau or '?'}"
+    corps_html = (
+        "<p><b>Le chatbot du camping a détecté une demande urgente.</b></p>"
+        f"<p><b>Niveau :</b> {niveau_txt}<br><b>Raison :</b> {raison_txt}</p>"
+        f"<p><b>Message du client :</b><br>{message_txt}</p>"
+        "<p style='color:#888'>Les coordonnées du client sont masquées par sécurité.<br>"
+        "Assistant MP Solutions IA</p>"
+    )
+    corps_texte = (
+        "Le chatbot du camping a détecté une demande urgente.\n"
+        f"Niveau : {niveau or '?'}\nRaison : {raison or 'non précisée'}\n"
+        f"Message du client : {str(message_client or '')[:300]}\n"
+        "-- Assistant MP Solutions IA"
+    )
+    payload = {
+        "sender": {"name": "Chatbot Camping Les Eychecadous", "email": expediteur},
+        "to": [{"email": destinataire}],
+        "subject": sujet,
+        "htmlContent": corps_html,
+        "textContent": corps_texte,
+    }
+    if copie and copie.lower() != "aucune" and copie != destinataire:
+        payload["cc"] = [{"email": copie}]
+
+    def _envoi():
+        try:
+            statut, _ = _appel_brevo(BREVO_URL_ENVOI, payload)
+            if 200 <= statut < 300:
+                print(f"[alerte] email envoye (HTTP {statut})", flush=True)
+            else:
+                print(f"[alerte] ECHEC : Brevo HTTP {statut}", flush=True)
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")[:300]
+            print(f"[alerte] ECHEC Brevo HTTP {e.code} : {detail}", flush=True)
+        except Exception as e:
+            print(f"[alerte] ECHEC envoi : {e}", flush=True)
+
+    threading.Thread(target=_envoi, daemon=True).start()
+
+
 # ── Garder la cle active (Brevo la coupe apres 90 jours sans usage) ──────────
 
 _INTERVALLE_PING = 7 * 24 * 3600  # une fois par semaine

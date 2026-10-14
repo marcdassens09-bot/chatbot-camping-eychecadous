@@ -1,4 +1,3 @@
-# # from twilio.rest import Client as TwilioClient
 import os
 import json
 import re
@@ -15,6 +14,7 @@ from reporting_dashboard import reporting_bp
 from envoi_fiche import (
     MOTIF_EMAIL, MOTIF_TELEPHONE, OUTIL_TRANSMETTRE,
     extraire_coordonnees, transmettre_demande, maintenir_cle_active,
+    envoyer_alerte,
 )
 # NE PAS reactiver calendar_service : l'agenda Google est vide (0 evenement,
 # verifie le 03/08/2026). verifier_dispo() renvoie True des que l'agenda est
@@ -200,23 +200,6 @@ Une simple question sur les disponibilites n'est JAMAIS une escalade.""",
     except Exception:
         return {"escalade": False, "niveau": "faible", "raison": ""}
 
-
-def envoyer_whatsapp_anthony(message):
-    """Envoie une alerte WhatsApp à Anthony via Twilio."""
-    try:
-        import os
-        # twilio_client = TwilioClient(
-            # os.environ.get("TWILIO_ACCOUNT_SID"),
-            # os.environ.get("TWILIO_AUTH_TOKEN")
-        # )
-        # twilio_client.messages.create(
-            # from_="whatsapp:+14155238886",
-            # to=os.environ.get("ANTHONY_WHATSAPP"),
-            # body=message
-        # )
-        print("WhatsApp envoyé à Anthony", flush=True)
-    except Exception as e:
-        print(f"Erreur WhatsApp : {e}", flush=True)
 
 def purger_log_ancien(chemin, jours=30):
     from datetime import datetime, timedelta
@@ -618,8 +601,7 @@ def chat():
             enregistrer_escalade(message_filtre, escalade.get("niveau", "?"), escalade.get("raison", ""))
             niveau = escalade.get("niveau", "faible")
             raison = escalade.get("raison", "")
-            msg_anthony = f"🚨 ALERTE CHATBOT CAMPING\nNiveau : {niveau}\nRaison : {raison}\nMessage client : {message_filtre[:100]}"
-            envoyer_whatsapp_anthony(msg_anthony)
+            envoyer_alerte(niveau, raison, message_filtre)
         log_event(
             log_path="/var/data/chat_events.jsonl",
             question=message_filtre,
