@@ -1,10 +1,13 @@
 import os
 import hmac
+import html
 import json
 import re
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
+import markdown
 from flask import Flask, request, jsonify, render_template
+from markupsafe import Markup
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from flask_limiter import Limiter
@@ -251,9 +254,10 @@ def generer_rapport_hebdo():
         questions = " | ".join(questions_list)
         resultat = client.messages.create(
             model="claude-sonnet-5",
-            max_tokens=500,
+            # 500 coupait le rapport avant "point a ameliorer" (constate le 01/11/2026).
+            max_tokens=1500,
             thinking={"type": "disabled"},
-            system="Analyse ces questions de clients d'un camping francais. Genere un rapport : Top 3 sujets (%), ce qui marche, point a ameliorer, 1 conseil concret pour le gerant.",
+            system="Analyse ces questions de clients d'un camping francais. Genere un rapport en Markdown, concis : Top 3 sujets (%), ce qui marche, point a ameliorer, 1 conseil concret pour le gerant.",
             messages=[{"role": "user", "content": f"Questions : {questions}"}]
         )
         return resultat.content[0].text.strip()
@@ -323,7 +327,18 @@ def rapport():
     cle_attendue = os.environ.get("RAPPORT_CLE", "")
     if not cle_attendue or not hmac.compare_digest(cle, cle_attendue):
         return jsonify({"erreur": "Acces refuse"}), 403
-    return jsonify({"rapport": generer_rapport_hebdo()})
+    texte = generer_rapport_hebdo()
+    if request.args.get("format") == "json":
+        return jsonify({"rapport": texte})
+    # Le texte vient du modele, lui-meme nourri par les questions des visiteurs :
+    # on echappe tout HTML avant de convertir le Markdown.
+    contenu = markdown.markdown(html.escape(texte, quote=False), extensions=["tables"])
+    return render_template(
+        "rapport.html",
+        contenu=Markup(contenu),
+        client_name=os.environ.get("REPORTING_CLIENT_NAME", "Votre assistant"),
+        date=datetime.now().strftime("%d/%m/%Y"),
+    )
 
 # Prompt systeme du bot public. Deplace dans une constante lors du passage a la
 # boucle d'agent (05/08/2026) : le contenu est inchange, a l'exception de la
