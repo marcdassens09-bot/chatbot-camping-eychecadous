@@ -239,17 +239,32 @@ def generer_rapport_hebdo():
     try:
         # Meme source et meme fenetre (30 jours) que le tableau de bord /reporting.
         events = load_events("/var/data/chat_events.jsonl", days=30)
-        questions_list = [str(ev.get("question", "")).strip() for ev in events[-50:]]
-        questions_list = [q for q in questions_list if q]
-        if not questions_list:
+        # Les reponses courtes ("oui", "ok", "merci") sont ecartees : sans la
+        # conversation autour, le modele les prenait pour une perte de contexte
+        # du bot (rapport du 01/11/2026). Meme seuil que dans /chat.
+        retenus = [ev for ev in events
+                   if len(str(ev.get("question", "")).split()) > 4][-50:]
+        if not retenus:
             return "Aucune question enregistree cette semaine."
-        questions = " | ".join(questions_list)
+        # Les messages qui ont declenche l'email d'alerte sont marques, sinon le
+        # modele concluait a une urgence "noyee dans le flux".
+        questions = " | ".join(
+            ("[ALERTE ENVOYEE] " if ev.get("urgent") else "") + str(ev["question"]).strip()
+            for ev in retenus
+        )
         resultat = client.messages.create(
             model="claude-sonnet-5",
             # 500 coupait le rapport avant "point a ameliorer" (constate le 01/11/2026).
             max_tokens=1500,
             thinking={"type": "disabled"},
-            system="Analyse ces questions de clients d'un camping francais. Genere un rapport en Markdown, concis : Top 3 sujets (%), ce qui marche, point a ameliorer, 1 conseil concret pour le gerant.",
+            system=(
+                "Analyse ces questions de clients d'un camping francais. Les reponses courtes "
+                "(oui, ok, merci) ont ete retirees : le chatbot, lui, voit toute la conversation. "
+                "[ALERTE ENVOYEE] signale un message juge urgent, pour lequel un email d'alerte a "
+                "deja ete envoye automatiquement au camping. Genere un rapport en Markdown, concis : "
+                "Top 3 sujets (%), urgences signalees, ce qui marche, point a ameliorer, "
+                "1 conseil concret pour le gerant."
+            ),
             messages=[{"role": "user", "content": f"Questions : {questions}"}]
         )
         return resultat.content[0].text.strip()
