@@ -15,6 +15,7 @@ from flask_limiter.util import get_remote_address
 
 from reporting_logger import log_event
 from reporting_dashboard import reporting_bp
+from reporting_stats import load_events
 from envoi_fiche import (
     MOTIF_EMAIL, MOTIF_TELEPHONE, OUTIL_TRANSMETTRE,
     extraire_coordonnees, transmettre_demande, maintenir_cle_active,
@@ -236,19 +237,10 @@ def enregistrer_escalade(message, niveau, raison):
 
 def generer_rapport_hebdo():
     try:
-        with open("/var/data/chat_events.jsonl", "r", encoding="utf-8") as f:
-            lignes = f.readlines()
-        if not lignes: 		
-            return "Aucune question enregistree cette semaine."
-        questions_list = []
-        for l in lignes[-50:]:
-            try:
-                event = json.loads(l)
-                q = event.get("question", "").strip()
-                if q:
-                    questions_list.append(q)
-            except (json.JSONDecodeError, AttributeError):
-                continue
+        # Meme source et meme fenetre (30 jours) que le tableau de bord /reporting.
+        events = load_events("/var/data/chat_events.jsonl", days=30)
+        questions_list = [str(ev.get("question", "")).strip() for ev in events[-50:]]
+        questions_list = [q for q in questions_list if q]
         if not questions_list:
             return "Aucune question enregistree cette semaine."
         questions = " | ".join(questions_list)

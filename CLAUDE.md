@@ -72,6 +72,11 @@ mot de passe = variable d'env `REPORTING_PASSWORD`.
 
 Rapport hebdo texte : `/rapport?cle=...`. Clé = variable d'env `RAPPORT_CLE`, sans valeur
 par défaut depuis le 01/11/2026 : si elle manque sur Render, la route renvoie toujours 403.
+Le rapport lit les 30 derniers jours via `load_events()`, comme `/reporting`.
+
+Conservation : `reporting_logger.py` purge les événements de plus de 12 mois (au plus une
+fois par jour). Standard MP Solutions IA, à annoncer dans la politique de confidentialité
+du site du camping.
 
 Le disque persistant Render (`reporting-data`, mount `/var/data`) est requis pour que
 les logs survivent aux redéploiements — le chemin dans l'appel `log_event()` doit
