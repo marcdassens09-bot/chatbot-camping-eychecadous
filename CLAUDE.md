@@ -70,6 +70,9 @@ route `/reporting` protégée par mot de passe). Dashboard :
 `chatbot-camping-eychecadous.onrender.com/reporting` — auth basique, utilisateur vide,
 mot de passe = variable d'env `REPORTING_PASSWORD`.
 
+Rapport hebdo texte : `/rapport?cle=...`. Clé = variable d'env `RAPPORT_CLE`, sans valeur
+par défaut depuis le 01/11/2026 : si elle manque sur Render, la route renvoie toujours 403.
+
 Le disque persistant Render (`reporting-data`, mount `/var/data`) est requis pour que
 les logs survivent aux redéploiements — le chemin dans l'appel `log_event()` doit
 correspondre à ce mount path.

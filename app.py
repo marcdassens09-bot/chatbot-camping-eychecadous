@@ -1,4 +1,5 @@
 import os
+import hmac
 import json
 import re
 from datetime import datetime, timedelta
@@ -317,8 +318,10 @@ def test_chat():
 
 @app.route("/rapport")
 def rapport():
+    # Pas de cle par defaut : sans RAPPORT_CLE sur Render, la route reste fermee.
     cle = request.args.get("cle", "")
-    if cle != os.environ.get("RAPPORT_CLE", "mpsolutions2026"):
+    cle_attendue = os.environ.get("RAPPORT_CLE", "")
+    if not cle_attendue or not hmac.compare_digest(cle, cle_attendue):
         return jsonify({"erreur": "Acces refuse"}), 403
     return jsonify({"rapport": generer_rapport_hebdo()})
 
